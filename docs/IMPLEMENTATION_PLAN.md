@@ -75,12 +75,12 @@ ei_conversion_v3/
   postcss.config.mjs                # @tailwindcss/postcss
   drizzle.config.ts                 # schema: src/db/schema.ts, out: drizzle/, url: DATABASE_URL_UNPOOLED ?? DATABASE_URL
   vercel.json                       # crons: [{ path: /api/cron/daily-quiz, schedule }]  (committed in the LAST Phase 3 step)
-  vitest.config.ts                  # resolve.alias { "@": "/src" }
+  vitest.config.mts                 # resolve.alias { "@": "/src" } (.mts so Vite loads it as ESM)
+  .npmrc                            # legacy-peer-deps=true: npm 10.9 crashes resolving the peer set otherwise; npm ci verified
   README.md                         # dev quick start, ffmpeg commands, cron/DST note
   drizzle/                          # generated SQL migrations (committed)
   public/
-    icon.svg                        # "Ei" wordmark glyph
-    og-default.png                  # 1200x630 wordmark on navy
+  # (icon.svg and opengraph-image.tsx live in src/app/, see below)
   scripts/
     check-env.ts                    # prebuild: required vars by APP_PHASE; bracket-placeholder check on production builds
     seed-quizzes.ts                 # Phase 3: load content/quizzes.sample.json locally; refuses to run when VERCEL_ENV=production
@@ -103,7 +103,8 @@ ei_conversion_v3/
     app/
       layout.tsx                    # fonts on <html>, skip link, Nav, Footer, Analytics, AttributionCapture
       globals.css                   # Tailwind @import + @theme tokens + heading classes
-      favicon.ico                   # auto-detected by Next (NOT also in public/)
+      icon.svg                      # "Ei" wordmark glyph, auto-detected favicon (NOT also in public/)
+      opengraph-image.tsx           # 1200x630 wordmark on navy, generated at build with next/og; applies to every route
       page.tsx                      # /
       sitemap.ts
       robots.ts                     # the only robots source (NO public/robots.txt)
@@ -140,8 +141,8 @@ ei_conversion_v3/
       media/VideoPlayer.tsx         # client component
       forms/ContactForm.tsx         # client component; mailto fallback when NEXT_PUBLIC_APP_PHASE < 2
       forms/EmailCapture.tsx        # client component; rendered only when NEXT_PUBLIC_APP_PHASE >= 2
-      forms/Honeypot.tsx            # company_website + started_at (set in useEffect)
-      forms/AttributionFields.tsx   # hidden utm/referrer inputs read from the ei_attr cookie
+      forms/Honeypot.tsx            # company_website + started_at (written to the input in useEffect)
+      # (no AttributionFields component: forms read the ei_attr cookie at submit time via lib/attribution.ts)
       guide/NichePicker.tsx, ServiceFitCard.tsx, StartingMix.tsx
       quiz/Quiz.tsx                 # client component
       analytics/Analytics.tsx       # Pixel + GA4 loaders, env gated, SPA page views
@@ -224,7 +225,7 @@ export const site = {
 } as const;
 ```
 
-`NEXT_PUBLIC_SITE_URL` is set only in the Vercel Production environment; previews fall back to `VERCEL_URL`, so canonical URLs and email links on a preview point at that preview. Rename to E2 Results = edit this file, swap `public/icon.svg` and `og-default.png`, verify the new domain in Resend.
+`NEXT_PUBLIC_SITE_URL` is set only in the Vercel Production environment; previews fall back to `VERCEL_URL`, so canonical URLs and email links on a preview point at that preview. Rename to E2 Results = edit this file, swap `src/app/icon.svg` and `src/app/opengraph-image.tsx`, verify the new domain in Resend.
 
 ## 4. Design system
 
@@ -306,7 +307,7 @@ Button labels are navy on amber (not white on amber), which passes AA at 16px bo
 
 Global rules:
 - One H1 per page; every CTA is a `Button`.
-- Every page sets `metadata` through `lib/seo.ts`: title is written WITHOUT the brand and `seo.ts` appends `| ${site.name}`; a description; canonical URL from `site.url`; `og-default.png`. `layout.tsx` sets `metadataBase: new URL(site.url)`, `openGraph` defaults (site name, locale, default image), and `twitter: { card: "summary_large_image" }`.
+- Every page sets `metadata` through `lib/seo.ts`: title is written WITHOUT the brand and `seo.ts` appends `| ${site.name}`; a description; canonical URL from `site.url`; the default social image comes from `src/app/opengraph-image.tsx`. `layout.tsx` sets `metadataBase: new URL(site.url)`, `openGraph` defaults (site name, locale, default image), and `twitter: { card: "summary_large_image" }`.
 - The root layout emits `Organization` JSON-LD from `site.ts`: `name`, `url`, `email: site.contactEmail`, `address` from `site.mailingAddress` (as `PostalAddress` text). No `sameAs` until social profiles exist, no `aggregateRating` ever.
 - The three dynamic public routes (`/guide/[niche]`, `/services/[service]`, `/learn/[service]`) export `generateStaticParams` AND `export const dynamicParams = false;` so an unknown slug returns the 404 page instead of rendering at request time.
 - Next 16: `params` and `searchParams` are Promises. Every page and `generateMetadata` does `const { niche } = await params;` / `const { service, niche } = await searchParams;`.
@@ -371,7 +372,7 @@ Public, not in nav or sitemap, `robots: noindex, follow` (the email is the gate 
 ### /contact
 Hero (white): H1 "See if there's a good fit"; sub "Tell us a little about the business. We reply within {contact.replyWindow} with an honest read on whether we can help."
 
-`ContactForm`: Name (required), Email (required), Phone (optional, `tel`), "What's going on with your marketing right now?" textarea (required, 20 to 2000 chars), Service select (optional: four services + "Not sure", which submits `""`), Industry select (optional: every niche in `nicheList` + "Other", which submits `"other"`), `Honeypot`, `AttributionFields`, `<noscript>` line "Enable JavaScript to send this form, or email {site.contactEmail}." Prefill from `await searchParams` `?service=` and `?niche=`, validated against `SERVICE_SLUGS` and `NICHE_FORM_VALUES`; unknown values are ignored. Submit "Send it over".
+`ContactForm`: Name (required), Email (required), Phone (optional, `tel`), "What's going on with your marketing right now?" textarea (required, 20 to 2000 chars), Service select (optional: four services + "Not sure", which submits `""`), Industry select (optional: every niche in `nicheList` + "Other", which submits `"other"`), `Honeypot`, attribution from the `ei_attr` cookie at submit, `<noscript>` line "Enable JavaScript to send this form, or email {site.contactEmail}." Prefill from `await searchParams` `?service=` and `?niche=`, validated against `SERVICE_SLUGS` and `NICHE_FORM_VALUES`; unknown values are ignored. Submit "Send it over".
 
 Error copy: 400 shows the field errors inline; 429 "Too many attempts. Try again later or email us at {site.contactEmail}."; 500 or network "Something went wrong. Email us at {site.contactEmail}."
 
@@ -947,7 +948,7 @@ Because a failed chunk sets its `email_log` rows to `failed` (not deleted, not l
 | `quiz_answer` | `Quiz` reveal | `slug`, `correct` | custom | custom |
 | `niche_select` | `NichePicker` | `niche` | custom | custom |
 
-- UTM and source: `AttributionCapture` (tiny client component in the layout) reads `utm_*`, `document.referrer`, `location.pathname`, and `?src=` (used as `utm_source` fallback for `email`, `quiz`, `unlock`) on first page view and writes a first-party cookie `ei_attr` (JSON, 30 days, `sameSite=lax`, not httpOnly). First touch only: it never overwrites an existing cookie. `AttributionFields` reads it into hidden inputs on both forms; the server validates with `attributionSchema` and stores it in `leads.attribution` / `subscribers.attribution`. Email links carry `?src=email` or `?src=quiz` so email-driven leads are attributable.
+- UTM and source: `AttributionCapture` (tiny client component in the layout) reads `utm_*`, `document.referrer`, `location.pathname`, and `?src=` (used as `utm_source` fallback for `email`, `quiz`, `unlock`) on first page view and writes a first-party cookie `ei_attr` (JSON, 30 days, `sameSite=lax`, not httpOnly). First touch only: it never overwrites an existing cookie. both forms read it at submit time (`readAttributionCookie`) and send it in the JSON body; the server validates with `attributionSchema` and stores it in `leads.attribution` / `subscribers.attribution`. Email links carry `?src=email` or `?src=quiz` so email-driven leads are attributable.
 - Consent stance: audience is US local businesses. No cookie banner at launch; nothing loads until an id is set, and `/privacy` discloses Pixel and GA4 once enabled. If the owner ever targets visitors in jurisdictions requiring consent, add a lightweight banner gating the two scripts behind a `localStorage` flag; `Analytics.tsx` reserves a single `consentGranted` boolean for it. No analytics on `/admin`.
 
 ## 14. Video
@@ -1037,9 +1038,9 @@ The Neon integration also injects legacy `POSTGRES_URL` / `PG*` variables; the a
 4. Content: `types.ts`, `niches/index.ts` registry with derived slugs and `nichesForService`/`joinNames`, three niche files (with `plural`, `teaser`), four service files (with `pricingLine`, `deepDive.teaser`), `home.ts`, `contact.ts`, `videos.ts` (all `ready: false`, `mediaUrl`), `privacy.ts`.
 5. Owner supplies every bracketed value in `site.ts`, `home.ts`, `contact.ts`, the four service files (honest lines, pricing lines, teasers, revisions policy), and `privacy.ts`; the developer replaces them. Videos may stay placeholders; text may not.
 6. Pages: `/`, `/guide`, `/guide/[niche]`, `/services`, `/services/[service]`, `/learn/[service]` (all three dynamic routes with `dynamicParams = false` and awaited `params`), `/contact` (Phase 1 mailto fallback), `/thank-you`, `/privacy`, `not-found`, `sitemap.ts`, `robots.ts`, `favicon.ico` in `src/app/`.
-7. `VideoPlayer` with the coming-soon card; `ContactForm` UI with the `publicPhase()` branch; `EmailCapture` built but hidden below phase 2 (the deep-dive band links to `/learn`); `Honeypot`, `AttributionFields`, `lib/phase.ts`.
+7. `VideoPlayer` with the coming-soon card; `ContactForm` UI with the `publicPhase()` branch; `EmailCapture` built but hidden below phase 2 (the deep-dive band links to `/learn`); `Honeypot`, `lib/phase.ts`.
 8. `Analytics.tsx` env-gated with SPA page views and token stripping; `lib/analytics.ts`; `AttributionCapture` cookie.
-9. SEO metadata per page; JSON-LD helpers; `og-default.png`; `scripts/check-env.ts` with the rules in section 15.
+9. SEO metadata per page; JSON-LD helpers; `opengraph-image.tsx`; `scripts/check-env.ts` with the rules in section 15.
 10. `test/content.test.ts` with: ranks 1 to 4 unique per niche; `slug` equals registry key; non-empty `plural`, `teaser`, service lists, `pricingLine`, `deepDive.teaser`; `honestLine` present on the two ads services; the claims regexes below against every string under `src/content` and `src/config`; the bracket regex when `CONTENT_STRICT=1` (CI sets it on `main`).
 11. Deploy to Vercel on Hobby and share the `*.vercel.app` URL with the owner for review. Before pointing `ei-conversion.com` at the project, upgrade the Vercel project to Pro (section 17 A). Then connect the domain and set the Phase 1 production env vars (`NEXT_PUBLIC_SITE_URL`, `APP_PHASE=1`, `NEXT_PUBLIC_APP_PHASE=1`).
 12. Optional but recommended now: add the Resend DNS records (section 10, 17 D) so verification propagates while Phase 2 is built.
@@ -1131,7 +1132,7 @@ Open questions for the owner: timezone and preferred local send hour; daily or w
 
 ## 20. Future work
 
-- **Rename to E2 Results.** Change `config/site.ts` (name, wordmark "E2", tagline, domain, from and contact addresses), swap `public/icon.svg` and `og-default.png`, add the new domain in Vercel with a permanent redirect from the old one in `next.config.ts` `redirects()`, verify the new domain in Resend (the free tier allows three), rename the R2 custom domain, and keep the old domain redirecting for a year. `RESEND_SEGMENT_ID` and the database do not change.
+- **Rename to E2 Results.** Change `config/site.ts` (name, wordmark "E2", tagline, domain, from and contact addresses), swap `src/app/icon.svg` and `src/app/opengraph-image.tsx`, add the new domain in Vercel with a permanent redirect from the old one in `next.config.ts` `redirects()`, verify the new domain in Resend (the free tier allows three), rename the R2 custom domain, and keep the old domain redirecting for a year. `RESEND_SEGMENT_ID` and the database do not change.
 - **More niches.** Add `content/niches/hvac.ts`, `dental.ts`, `construction.ts` and register each with one import line in `niches/index.ts`; the picker, sitemap, static params, Home copy, footer, and the contact form's industry select pick them up. No database migration, because `leads.niche` is text.
 - **Turnstile.** Keep the honeypot; add the widget to `ContactForm` and `EmailCapture` gated on `NEXT_PUBLIC_TURNSTILE_SITE_KEY`; verify server-side in both routes.
 - **Resend webhook reconciliation.** Handle `contact.updated` so dashboard Broadcast unsubscribes sync back to `subscribers.status`.
