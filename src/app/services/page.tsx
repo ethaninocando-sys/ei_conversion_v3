@@ -1,14 +1,14 @@
 import type { Metadata } from "next";
-import Link from "next/link";
 import { serviceList } from "@/content/services";
 import { nichesForService } from "@/content/niches";
 import { buildMetadata } from "@/lib/seo";
 import { Section } from "@/components/ui/Section";
-import { Button } from "@/components/ui/Button";
-import { Card } from "@/components/ui/Card";
+import { Marker } from "@/components/ui/Marker";
+import { Action } from "@/components/ui/Action";
+import { IndexList } from "@/components/ui/IndexList";
 
 export const metadata: Metadata = buildMetadata({
-  title: "Website, Meta Ads, Local SEO and Google Ads Services",
+  title: "Websites, Meta Ads, Local SEO and Google Ads",
   description: "What each service includes, who it fits, and who it does not. Plain language, no hype.",
   path: "/services",
 });
@@ -16,52 +16,57 @@ export const metadata: Metadata = buildMetadata({
 export default function ServicesPage() {
   return (
     <>
-      <Section tone="white" className="!pb-10">
-        <div className="max-w-3xl">
-          <p className="eyebrow mb-4">Services</p>
-          <h1 className="h1 text-navy">Four services, explained plainly</h1>
-          <p className="mt-6 text-lg">
-            Each page says who it is for, who it is not for, and what is included. Watch the short video first.
-          </p>
+      <Section className="pb-14 pt-14 md:pb-20 md:pt-24">
+        <div className="grid gap-x-5 gap-y-10 md:grid-cols-12">
+          <div className="md:col-span-8">
+            <Marker>Services</Marker>
+            <h1 className="display display-xl mt-7">Four services, explained plainly.</h1>
+          </div>
+          <div className="md:col-span-4 md:self-end">
+            <p className="lede">
+              Each page says what is included, who it is for, and who it is not for. There is a short film on every
+              one. Start there if you are deciding.
+            </p>
+          </div>
         </div>
       </Section>
-      <Section tone="white" className="!pt-0">
-        <div className="grid gap-4 md:grid-cols-2">
-          {serviceList.map((s) => {
+
+      <Section className="pb-16 md:pb-24">
+        <IndexList
+          items={serviceList.map((s) => {
             const fits = nichesForService(s.slug);
-            return (
-              <Card key={s.slug} title={s.name} href={`/services/${s.slug}`}>
-                <p>{s.oneLiner}</p>
-                <p className="mt-2 text-sm text-muted">{s.bestFor}</p>
-                {fits.length > 0 && (
-                  <p className="mt-4 flex flex-wrap items-center gap-2 text-sm">
-                    <span className="text-muted">Best for:</span>
-                    {fits.map((n) => (
-                      <span key={n.slug} className="rounded-sm border border-line px-2 py-0.5">
-                        {n.name}
-                      </span>
-                    ))}
-                  </p>
-                )}
-              </Card>
-            );
+            return {
+              key: s.slug,
+              title: s.name,
+              body: s.oneLiner,
+              href: `/services/${s.slug}`,
+              aside:
+                fits.length > 0 ? (
+                  <p className="marker">Best for {fits.map((n) => n.name).join(", ")}</p>
+                ) : (
+                  <p className="marker">Situational</p>
+                ),
+            };
           })}
-        </div>
+        />
       </Section>
-      <Section tone="navy" heading="Not sure which one?">
-        <p className="mb-6 text-lg text-offwhite/85">
-          The guide ranks all four for your industry, downsides included.
-        </p>
-        <Button href="/guide" variant="secondary">
-          Start with the guide
-        </Button>
-        <p className="mt-6 text-sm text-offwhite/70">
-          Or go straight to the{" "}
-          <Link href="/contact" className="underline">
-            contact page
-          </Link>
-          .
-        </p>
+
+      <Section ground="ink" className="py-20 md:py-28">
+        <div className="grid gap-x-5 gap-y-8 md:grid-cols-12">
+          <div className="md:col-span-3">
+            <Marker>Not sure which</Marker>
+          </div>
+          <div className="md:col-span-9">
+            <p className="display display-lg">Don&rsquo;t pick from this page.</p>
+            <p className="lede mt-5 measure !text-paper/75">
+              The guide ranks all four for your trade and tells you which to skip. It takes about ten minutes and
+              costs nothing.
+            </p>
+            <div className="mt-10">
+              <Action href="/guide">Read the guide</Action>
+            </div>
+          </div>
+        </div>
       </Section>
     </>
   );

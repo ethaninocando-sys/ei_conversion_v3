@@ -6,9 +6,8 @@ import { site } from "@/config/site";
 import type { ServiceSlug } from "@/content/types";
 import { subscribeSchema, fieldErrors } from "@/lib/validation";
 import { track } from "@/lib/analytics";
-import { inputClass } from "@/components/ui/Field";
-import { Honeypot } from "@/components/forms/Honeypot";
 import { readAttributionCookie } from "@/lib/attribution";
+import { Honeypot } from "@/components/forms/Honeypot";
 
 interface Props {
   service: ServiceSlug;
@@ -16,12 +15,12 @@ interface Props {
   buttonLabel: string;
 }
 
-/** The fixed one-line disclosure. Wording is part of the spec; do not edit casually. */
+/** Fixed disclosure. The wording is part of the spec; do not edit casually. */
 export const DISCLOSURE = "You'll get the full video plus a short daily marketing puzzle. Unsubscribe anytime.";
 
 /**
- * Email field that unlocks the deep-dive video. This IS the newsletter opt-in
- * (no checkbox). Rendered only when the public phase is 2 or higher.
+ * The email field that unlocks the deep-dive film. This IS the list opt-in;
+ * there is no checkbox. Rendered only when the public phase is 2 or higher.
  */
 export function EmailCapture({ service, headline, buttonLabel }: Props) {
   const router = useRouter();
@@ -42,7 +41,7 @@ export function EmailCapture({ service, headline, buttonLabel }: Props) {
     };
     const parsed = subscribeSchema.safeParse(raw);
     if (!parsed.success) {
-      setError(fieldErrors(parsed.error).email ?? "Enter a valid email address.");
+      setError(fieldErrors(parsed.error).email ?? "That email address does not look right.");
       setStatus("error");
       return;
     }
@@ -53,13 +52,13 @@ export function EmailCapture({ service, headline, buttonLabel }: Props) {
         body: JSON.stringify(raw),
       });
       if (res.status === 429) {
-        setError(`Too many attempts. Try again later or email us at ${site.contactEmail}.`);
+        setError(`That's a few too many tries. Give it an hour, or write to ${site.contactEmail}.`);
         setStatus("error");
         return;
       }
       const json = (await res.json().catch(() => null)) as { ok: true; redirectTo: string } | null;
       if (!res.ok || !json?.ok) {
-        setError(`Something went wrong. Email us at ${site.contactEmail}.`);
+        setError(`Something broke on our end. Write to ${site.contactEmail}.`);
         setStatus("error");
         return;
       }
@@ -67,7 +66,7 @@ export function EmailCapture({ service, headline, buttonLabel }: Props) {
       setStatus("done");
       router.push(json.redirectTo);
     } catch {
-      setError(`Something went wrong. Email us at ${site.contactEmail}.`);
+      setError(`Something broke on our end. Write to ${site.contactEmail}.`);
       setStatus("error");
     }
   }
@@ -75,11 +74,11 @@ export function EmailCapture({ service, headline, buttonLabel }: Props) {
   const id = `capture-${service}`;
 
   return (
-    <form onSubmit={onSubmit} noValidate className="space-y-3">
-      <label htmlFor={id} className="block font-semibold">
+    <form onSubmit={onSubmit} noValidate className="max-w-xl">
+      <label htmlFor={id} className="marker block">
         {headline}
       </label>
-      <div className="flex flex-col gap-3 sm:flex-row">
+      <div className="mt-3 flex flex-col gap-4 sm:flex-row sm:items-end">
         <input
           id={id}
           name="email"
@@ -87,24 +86,24 @@ export function EmailCapture({ service, headline, buttonLabel }: Props) {
           autoComplete="email"
           required
           placeholder="you@company.com"
-          className={`${inputClass} sm:max-w-sm`}
+          className="control sm:flex-1"
           aria-describedby={`${id}-disclosure${error ? ` ${id}-error` : ""}`}
         />
-        <button type="submit" className="btn btn-primary" disabled={status === "submitting" || status === "done"}>
-          {status === "done" ? "Sending you there now" : status === "submitting" ? "One moment…" : buttonLabel}
+        <button type="submit" className="action shrink-0" disabled={status === "submitting" || status === "done"}>
+          {status === "done" ? "Taking you there" : status === "submitting" ? "One moment" : buttonLabel}
         </button>
       </div>
       {error && (
-        <p id={`${id}-error`} role="alert" className="text-sm text-error">
+        <p id={`${id}-error`} role="alert" className="mt-3 text-sm text-accent-light">
           {error}
         </p>
       )}
-      <p id={`${id}-disclosure`} className="text-sm opacity-80">
+      <p id={`${id}-disclosure`} className="mt-4 text-sm opacity-70">
         {DISCLOSURE}
       </p>
       <Honeypot />
       <noscript>
-        <p className="text-sm opacity-80">Enable JavaScript to send this form, or email {site.contactEmail}.</p>
+        <p className="mt-3 text-sm opacity-70">Turn on JavaScript to send this, or email {site.contactEmail}.</p>
       </noscript>
     </form>
   );

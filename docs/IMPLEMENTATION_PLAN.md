@@ -56,7 +56,7 @@ Pin exact versions at install and record them in `package.json`.
 | Cloudflare Turnstile (later) | Bot check | free | free | never |
 | Meta Pixel, GA4 | Env-var slots only | n/a | free | never |
 
-**When Resend paid becomes necessary.** Daily transactional sends = quiz emails (one per active subscriber) + unlock emails + 2 per contact submission. The 100/day cap binds first, and Resend's daily quota resets at midnight UTC. At roughly 80 active subscribers the daily quiz alone risks the cap, and anything over it fails for the rest of the UTC day. Rule: `/admin` shows a red banner when active subscribers exceed 70; upgrade to Resend Pro (about $20/mo, 50,000/mo, no daily cap) before the list passes 80. Note: Resend Broadcasts (marketing sends) are free to 1,000 contacts and do not consume the 100/day transactional quota; section 10 explains why per-recipient sends are still chosen and what that costs.
+**When Resend paid becomes necessary.** Daily transactional sends = quiz emails (one per active subscriber) + unlock emails + 2 per contact submission. The 100/day cap binds first, and Resend's daily quota resets at midnight UTC. At roughly 80 active subscribers the daily quiz alone risks the cap, and anything over it fails for the rest of the UTC day. Rule: `/admin` shows a warning banner when active subscribers exceed 70; upgrade to Resend Pro (about $20/mo, 50,000/mo, no daily cap) before the list passes 80. Note: Resend Broadcasts (marketing sends) are free to 1,000 contacts and do not consume the 100/day transactional quota; section 10 explains why per-recipient sends are still chosen and what that costs.
 
 **Deliberately not used.** No Formspree, no CMS, no Redis or Upstash, no auth library, no `svix` package (the Resend SDK verifies webhooks itself), no email-template library (`@react-email/render` is not installed; templates are plain TypeScript), no `date-fns-tz`, no `@vercel/analytics`, no Playwright or Prettier in Phase 1 (Playwright is listed under Future work). Rate limiting and sessions are built on Postgres and Web Crypto. Database transactions (`db.transaction`) are forbidden in the codebase because the HTTP driver does not support them; multi-statement writes use `db.batch([...])` (section 8).
 
@@ -105,7 +105,7 @@ ei_conversion_v3/
       layout.tsx                    # fonts on <html>, skip link, Nav, Footer, Analytics, AttributionCapture
       globals.css                   # Tailwind @import + @theme tokens + heading classes
       icon.svg                      # "Ei" wordmark glyph, auto-detected favicon (NOT also in public/)
-      opengraph-image.tsx           # 1200x630 wordmark on navy, generated at build with next/og; applies to every route
+      opengraph-image.tsx           # 1200x630 cover page on paper, generated at build with next/og; applies to every route
       page.tsx                      # /
       sitemap.ts
       robots.ts                     # the only robots source (NO public/robots.txt)
@@ -137,14 +137,14 @@ ei_conversion_v3/
       api/cron/daily-quiz/route.ts  # GET, CRON_SECRET (Phase 3)
       api/webhooks/resend/route.ts  # POST, bounce/complaint (Phase 3); 503 while RESEND_WEBHOOK_SECRET is unset
     components/
-      ui/Button.tsx, Section.tsx, Card.tsx, Wordmark.tsx, ProsCons.tsx, Field.tsx, Eyebrow.tsx
+      ui/Action.tsx, Section.tsx, Marker.tsx, IndexList.tsx, Wordmark.tsx, ProsCons.tsx, Field.tsx, JsonLd.tsx
       layout/Nav.tsx, Footer.tsx, MobileMenu.tsx
       media/VideoPlayer.tsx         # client component
       forms/ContactForm.tsx         # client component; mailto fallback when NEXT_PUBLIC_APP_PHASE < 2
       forms/EmailCapture.tsx        # client component; rendered only when NEXT_PUBLIC_APP_PHASE >= 2
       forms/Honeypot.tsx            # company_website + started_at (written to the input in useEffect)
       # (no AttributionFields component: forms read the ei_attr cookie at submit time via lib/attribution.ts)
-      guide/NichePicker.tsx, ServiceFitCard.tsx, StartingMix.tsx
+      guide/NichePicker.tsx, FitRow.tsx, StartingMix.tsx
       quiz/Quiz.tsx                 # client component
       analytics/Analytics.tsx       # Pixel + GA4 loaders, env gated, SPA page views
       analytics/AttributionCapture.tsx # writes first-touch ei_attr cookie
@@ -230,79 +230,67 @@ export const site = {
 
 ## 4. Design system
 
-**Feel.** Quiet, confident, editorial. White space, one accent color used only for the primary action on a screen. No gradients, no black-and-gold, no countdown timers, no red urgency.
+**Revised 2026-09-17.** The first build used a navy/amber palette with rounded cards and identical stacked bands. It read as generic, so the visual system was rebuilt editorial while the page structure, funnel, routing and content model stayed exactly as specified. The rules below replace the original ones.
 
-**Tokens** (`src/app/globals.css`, Tailwind 4 CSS-first config, no `tailwind.config.ts`). Colors, radii, and the text scale live in plain `@theme`; the two font tokens reference other variables and therefore must be in `@theme inline`, otherwise Tailwind resolves `var(--font-manrope)` at `:root` where it is not defined and headings silently fall back to the browser font (https://tailwindcss.com/docs/theme, "Referencing other variables"; https://github.com/tailwindlabs/tailwindcss/discussions/15923).
+**Feel.** Print logic, not app-chrome logic. Paper ground, ink type, one deep accent. Hairline rules do the structural work. There are no cards, nothing is rounded, and there are no shadows or gradients. At most one dark block per page, so sections are not alternating bands.
 
-```css
-@import "tailwindcss";
-@theme {
-  --color-navy: #0B1F3A;        /* nav, footer, hero and CTA bands, headings on light */
-  --color-navy-700: #14305A;    /* hover on navy */
-  --color-offwhite: #F8FAFC;    /* page background */
-  --color-amber: #F59E0B;       /* primary CTA fill only */
-  --color-amber-dark: #B45309;  /* CTA hover; amber-as-text on light backgrounds (AA) */
-  --color-slate: #1E293B;       /* body text */
-  --color-muted: #64748B;       /* captions, eyebrows */
-  --color-line: #E2E8F0;        /* borders */
-  --color-white: #FFFFFF;       /* cards */
-  --color-success: #15803D;     /* form success only */
-  --color-error: #B91C1C;       /* form error text only, never marketing */
-  --radius-sm: 6px; --radius-md: 10px; --radius-lg: 16px;
-  --text-base: 1.0625rem;       /* 17px body on mobile */
-  --text-base--line-height: 1.6;
-}
-@theme inline {
-  --font-heading: var(--font-manrope);
-  --font-body: var(--font-inter);
-}
-html { color-scheme: light; }
-@media (min-width: 768px) { html { font-size: 18px; } }   /* body 18px on desktop; rem scale follows */
-body { background: var(--color-offwhite); color: var(--color-slate); font-family: var(--font-body); }
-.h1 { font-family: var(--font-heading); font-weight: 800; font-size: 2.25rem; line-height: 1.1; letter-spacing: -0.02em; }
-.h2 { font-family: var(--font-heading); font-weight: 700; font-size: 1.75rem; line-height: 1.2; }
-.h3 { font-family: var(--font-heading); font-weight: 700; font-size: 1.25rem; line-height: 1.3; }
-@media (min-width: 768px) { .h1 { font-size: 3.5rem; } .h2 { font-size: 2.5rem; } .h3 { font-size: 1.5rem; } }
-[data-tone="navy"] .btn-secondary { border-color: var(--color-offwhite); color: var(--color-offwhite); }
-[data-tone="navy"] .btn-ghost { color: var(--color-offwhite); }
-```
+**Tokens** (`src/app/globals.css`, Tailwind 4 CSS-first config, no `tailwind.config.ts`). Colors and the text scale live in plain `@theme`; the two font tokens reference other variables and therefore must be in `@theme inline`, otherwise Tailwind resolves them at `:root` where they are not defined and headings silently fall back.
 
-Button labels are navy on amber (not white on amber), which passes AA at 16px bold and above.
+| Token | Value | Use |
+|---|---|---|
+| `--color-paper` | `#FBFAF7` | Page ground, warm not blue |
+| `--color-paper-dim` | `#F2EFE8` | A second, quieter ground |
+| `--color-ink` | `#14110F` | Type, and the one dark block per page |
+| `--color-ink-soft` | `#3A342E` | Secondary type on paper |
+| `--color-muted` | `#5F584F` | Captions and markers on paper |
+| `--color-muted-ink` | `#A8A29A` | The same, on ink |
+| `--color-rule` | `#D8D2C7` | Hairline on paper |
+| `--color-rule-dark` | `#33302C` | Hairline on ink |
+| `--color-accent` | `#8B2E1F` | Oxblood; folios and quiet links, on paper only |
+| `--color-accent-light` | `#E08A70` | The accent on ink, lightened to clear 4.5:1 |
 
-**Typography** (`layout.tsx`, `next/font/google`, `display: "swap"`, `subsets: ["latin"]`): Manrope weights 600, 700, 800 with `variable: "--font-manrope"`; Inter 400, 500, 600 with `variable: "--font-inter"`. Both `.variable` class names go on `<html>`, not `<body>`: `<html lang="en" className={`${manrope.variable} ${inter.variable}`}>`. Phase 1 acceptance checks that the computed `font-family` of an `h1` in DevTools is Manrope.
+Anything tuned for paper must be re-tuned on ink or it fails contrast. Three `[data-ground="ink"]` rules handle that globally (marker colour, accent colour, rule colour), so an ink section needs no per-element overrides. `Section` emits `data-ground`; that attribute is the only switch.
 
-| Role | Font | Size mobile / desktop | Weight, notes |
+**Typography** (`layout.tsx`, `next/font/google`, `display: "swap"`, `subsets: ["latin"]`): **Fraunces** variable for display with `variable: "--font-fraunces"`, **Archivo** variable for text and interface with `variable: "--font-archivo"`. Both `.variable` class names go on `<html>`, not `<body>`.
+
+| Role | Class | Size | Notes |
 |---|---|---|---|
-| H1 (`.h1`) | Manrope | 36px / 56px | 800, line-height 1.1, tracking -0.02em |
-| H2 (`.h2`) | Manrope | 28px / 40px | 700 |
-| H3 (`.h3`) | Manrope | 20px / 24px | 700 |
-| Body (`text-base`) | Inter | 17px / 18px | 400, line-height 1.6, max width 65ch |
-| Small (`text-sm`) | Inter | 14px | 400 |
-| Eyebrow | Inter | 13px uppercase | 600, tracking 0.08em, muted |
+| Page title | `.display .display-xl` | `clamp(2.75rem, 7.4vw, 5.75rem)` | Fraunces 600, line-height 0.98, tracking -0.025em |
+| Section title | `.display .display-lg` | `clamp(2.125rem, 4.6vw, 3.5rem)` | |
+| Sub-head | `.display .display-md` | `clamp(1.5rem, 2.6vw, 2rem)` | |
+| Standfirst | `.lede` | `clamp(1.125rem, 1.6vw, 1.375rem)` | Archivo, ink-soft, `text-wrap: pretty` |
+| Body | `text-base` | 17px / 17.5px at 900px+ | Archivo, line-height 1.7 |
+| Marker | `.marker` | 11px uppercase, tracking 0.17em | Section labels and column heads |
+| Folio | `.numeral` | contextual | Fraunces, tabular, accent coloured |
 
-**Spacing and radius.** Tailwind default 4px scale. Sections `py-16 md:py-28`. Container `max-w-6xl mx-auto px-4 md:px-8` (16px gutters on mobile, no horizontal scroll). Cards: `rounded-lg`, 1px `line` border, white fill, no shadow. Buttons: `rounded-md`, minimum height 48px for touch. Video: `rounded-lg overflow-hidden`.
+**Layout.** Container `max-w-[78rem] mx-auto px-5 md:px-10`. A 12-column grid with `gap-x-5` is the working grid, and it is applied at `md` and up only: twelve columns at phone width leaves the columns narrower than the gaps. Asymmetry is the default, not centring. Section openers put the marker in a 3-column left rail and the heading in the 9 columns beside it (`SectionHead`).
 
 **Core components.**
 
-| Component | Props | Notes |
-|---|---|---|
-| `Wordmark` | `size`, `tone: light/dark` | `site.wordmark` ("Ei") in Manrope 800 inside a 40px navy rounded square, followed by `site.name`. Swapping to a logo later means editing this one file. |
-| `Button` | `variant: primary/secondary/ghost`, `href?`, `trackEvent?` | Primary = amber fill, navy text. Secondary = navy outline. Ghost = navy text, no border. Inside a `Section tone="navy"` the secondary and ghost variants switch to off-white via the `[data-tone="navy"]` CSS above, so no per-button prop is needed. Renders `<a>` when `href` given. Fires `track("cta_click", {label, href})`. |
-| `Section` | `tone: offwhite/white/navy`, `id`, `eyebrow?`, `heading?` | Emits `data-tone` on its root. Navy tone uses off-white text; used for hero, plain-dealing, and CTA bands only. |
-| `Card` | `title`, `eyebrow?`, `href?` | Bordered white card. |
-| `ProsCons` | `pros: string[]`, `cons: string[]` | Two columns on desktop, stacked on mobile. Plain check and dash markers, no red X icons. |
-| `ServiceFitCard` | `fit: ServiceFit` | Rank badge, service name, fit label, summary, `ProsCons`, link to `/services/[service]`. |
-| `VideoPlayer` | `slot: VideoSlotKey` | See section 14. |
-| `EmailCapture` | `service: ServiceSlug`, `headline`, `buttonLabel` | Email field, honeypot, attribution fields, the fixed one-line disclosure, `<noscript>` line. Inline success state. Rendered only when `publicPhase() >= 2`. |
-| `ContactForm` | `defaultService?`, `defaultNiche?` | See section 5. Phase 1 mailto fallback. |
-| `Honeypot` | none | Visually hidden `company_website` input (`tabIndex=-1`, `autoComplete="off"`, `aria-hidden`) plus hidden `started_at`, set in a `useEffect` on mount (never at render, which would be build time on static pages). |
-| `Quiz` | `quiz`, `token?` | Radio options in a fieldset, "Check answer" reveals, posts answer if token. Strips `?t=` from the URL on mount. |
-| `Nav` | none | Sticky, off-white, 1px bottom line. Wordmark, Guide, Services, Contact (primary button). Active link gets a 2px amber underline (`aria-current="page"`). Below `md` (768px) the links collapse into `MobileMenu`, a client component with focus trap and Esc to close, no library. |
-| `Footer` | none | Navy. Column 1: Wordmark + tagline + `site.city`. Column 2 "Pages": Home, Guide, Services, Contact, Privacy. Column 3 "Services": the four. Column 4 "Industries": every niche in `nicheList`. Bottom line: `site.contactEmail`, copyright from `site.legalName`. |
+| Component | Notes |
+|---|---|
+| `Section` | Full-bleed ground plus `Container`. `ground` is `paper`, `dim` or `ink`; it emits `data-ground`. Takes no heading props. |
+| `SectionHead` | Marker in the left rail, title and optional lede in the wide column. The page's main rhythm. |
+| `Marker` | The tracked label that opens a section, with an optional zero-padded folio in accent. |
+| `Action` | Three only: `solid` (ink rectangle), `outline` (the same rectangle drawn), `quiet` (underlined link with an arrow). Fires `track("cta_click")`. Replaces `Button`. |
+| `IndexList` | Numbered, rule-separated index. The workhorse; it replaces every grid of cards. |
+| `FitRow` | One ranked channel as a spread: folio and name left, verdict tracked out right, argument below. Replaces `ServiceFitCard`. The verdict label goes full width under the name below `md`, where the tracked text cannot fit three columns. |
+| `ProsCons` | Two columns split by a vertical hairline, headed "Where it wins" and "What it costs you". No icons. |
+| `NichePicker` | A rule-separated table of contents, one row per trade. |
+| `StartingMix` | Numbered steps with the rationale in a narrow outer column. |
+| `VideoPlayer` | Square-cornered frame, hairline border, ink play block. Unchanged behaviour: no `<video>` element exists before the click. |
+| `Field` | Label above, control underlined, error beneath. |
+| `Wordmark` | The name set in the display face with the initials in accent. A real space between the two spans, or the visible text stops matching the link's accessible name. |
+| `Nav` | Flat masthead with a bottom hairline. No blur, no floating pill, no sticky shadow. |
+| `Footer` | The one heavy block on every page: a colophon on ink. |
+
+**Form controls.** `.control` is underlined, never boxed: transparent background, a single bottom hairline, `border-radius: 0`, accent on focus. Select arrows are drawn with two gradients rather than an SVG.
 
 **Skip link.** "Skip to content" is the first child of `<body>` in `layout.tsx`, visually hidden until focused, targeting `<main id="main">`.
 
-**Dark mode.** Not supported. `color-scheme: light` is set explicitly so system dark mode does not invert form controls. One brand palette, less QA; navy bands already give contrast.
+**Dark mode.** Not supported. `color-scheme: light` is set explicitly so system dark mode does not invert form controls. One palette, less QA; the ink blocks already give contrast.
+
+**Checks that keep it honest.** A Playwright script sweeps every page at 320, 390, 768 and 1280 for horizontal overflow, and Lighthouse mobile runs on `/`, `/guide/roofing`, `/services/website`, `/contact` and `/privacy`. Both must be clean before a design change is committed.
 
 ## 5. Page-by-page specification
 
@@ -325,10 +313,10 @@ Exactly four sections, matching the spec: hero, sub-hero, VSL, closing band. Eve
 
 | Section | Purpose and copy structure | CTA |
 |---|---|---|
-| Hero (navy) | Eyebrow `home.eyebrow` ("Marketing for local service businesses"). H1 framework: `[Outcome the owner wants] + [without the thing they hate]`; draft "Get more of the right calls. Skip the marketing guesswork." Sub `home.sub`: "We help {joinNames(nicheList)} pick the one or two channels that actually fit, then build them properly. Start with the free guide." `joinNames` renders "roofers, med spas, and plumbers" from each niche's `plural`, so a new niche needs no copy edit here. | Primary "Read the free guide" -> `/guide`; Ghost "Pick your industry" -> `/guide#niches` |
+| Hero (paper) | Eyebrow `home.eyebrow` ("Marketing for local service businesses"). H1 framework: `[Outcome the owner wants] + [without the thing they hate]`; draft "Get more of the right calls. Skip the marketing guesswork." Sub `home.sub`: "We help {joinNames(nicheList)} pick the one or two channels that actually fit, then build them properly. Start with the free guide." `joinNames` renders "roofers, med spas, and plumbers" from each niche's `plural`, so a new niche needs no copy edit here. | Primary "Read the free guide" -> `/guide`; Ghost "Pick your industry" -> `/guide#niches` |
 | Sub-hero (white) | H2 "Four services. You probably need one or two." Four `Card`s (no links) with each service's `oneLiner` and `bestFor` line from content. Muted line: "The guide tells you which ones fit your trade, and which to skip." | Secondary "Find your industry in the guide" -> `/guide` |
 | VSL (offwhite) | H2 `home.vslHeading` ("[OWNER FIRST NAME] explains how we think about your first campaign"). `VideoPlayer slot="home"` (2 to 3 min). Three bullets summarizing the video: `home.vslBullets`. | Primary "Find your industry in the guide" -> `/guide` |
-| Plain-dealing (navy) | H2 `home.plainDealing.heading` ("What you will not get from us"). Bullets: no long contracts, no inflated promises, no results we cannot show you, no jargon. [OWNER: edit to what you can stand behind.] This band is the credibility substitute for testimonials. | Secondary "Start with the guide" -> `/guide` |
+| Ground rules (ink, the page's one dark block) | H2 `home.plainDealing.heading` ("What you will not get from us"). Bullets: no long contracts, no inflated promises, no results we cannot show you, no jargon. [OWNER: edit to what you can stand behind.] This band is the credibility substitute for testimonials. | Secondary "Start with the guide" -> `/guide` |
 
 "How it works" lives on `/contact` as "What happens next", not on Home.
 
@@ -341,11 +329,11 @@ Hero (white): eyebrow "The guide"; H1 "Which marketing actually fits your indust
 
 | Section | Content |
 |---|---|
-| Hero (navy) | Eyebrow "Guide: [Niche name]"; H1 `niche.headline`; sub `niche.intro`. |
+| Hero (paper) | Marker "Guide · [Niche name]"; H1 `niche.headline`; sub `niche.intro`. |
 | Buyer context (white) | H2 "How [niche] customers actually buy"; bullets from `buyerContext`. |
 | Ranked services (offwhite) | H2 "All four services, ranked for [niche]"; four `ServiceFitCard`s by `rank`. |
 | Starting mix (white) | H2 `startingMix.title`; ordered steps; rationale paragraph. |
-| CTA band (navy) | H2 "Want us to look at your specific situation?"; Primary "See if we're a fit" -> `/contact?niche=[slug]`; Ghost "Compare the services" -> `/services`. |
+| CTA band (ink) | H2 "Want this applied to your actual numbers?"; Primary "See if we're a fit" -> `/contact?niche=[slug]`; Ghost "Compare the services" -> `/services`. |
 
 SEO from `niche.seo`. JSON-LD: `Article` with `about` = niche name, plus `BreadcrumbList`.
 
@@ -356,13 +344,13 @@ Hero (white): H1 "Four services, explained plainly"; sub "Each page says who it 
 
 | Section | Content |
 |---|---|
-| Hero (navy) | Eyebrow "Service"; H1 `service.name`; sub `service.promise` (a statement of the work, never a result claim). |
+| Hero (paper) | Marker "Service"; H1 `service.name`; sub `service.promise` (a statement of the work, never a result claim). |
 | Short VSL (white) | `VideoPlayer slot="services.[slug].short"` (2 to 4 min). |
 | What is included (offwhite) | Checklist from `service.included`. Meta Ads and Google Ads pages render `service.honestLine` here (mandatory, see section 7). |
 | Fit (white) | Two columns "A good fit if" / "Not a fit if" from `goodFit` and `notFit`. |
 | How we work (offwhite) | Steps from `service.process`. Pricing line `service.pricingLine`. |
 | Which trades it fits (white) | Links to `/guide/[niche]` for each niche in `nichesForService(slug)`. |
-| Deep-dive band (navy) | Phase 2+: H2 "Watch the full [service] walkthrough"; sub "The in-depth video covers {service.deepDive.teaser}. Enter your email and we will send the link." `EmailCapture service=[slug]` button "Send me the video". Small text, verbatim: "You'll get the full video plus a short daily marketing puzzle. Unsubscribe anytime." On success: inline "Sending you there now" and immediate redirect to `redirectTo` from the API. Phase 1 (`publicPhase() < 2`): same H2 and teaser, no email field; Secondary button "Watch the full walkthrough" -> `/learn/[slug]`. The gate is soft either way. |
+| Deep-dive band (ink) | Phase 2+: H2 "Watch the full [service] walkthrough"; sub "The in-depth video covers {service.deepDive.teaser}. Enter your email and we will send the link." `EmailCapture service=[slug]` button "Send me the video". Small text, verbatim: "You'll get the full video plus a short daily marketing puzzle. Unsubscribe anytime." On success: inline "Sending you there now" and immediate redirect to `redirectTo` from the API. Phase 1 (`publicPhase() < 2`): same H2 and teaser, no email field; Secondary button "Watch the full walkthrough" -> `/learn/[slug]`. The gate is soft either way. |
 | CTA (white) | Primary "See if we're a fit" -> `/contact?service=[slug]`. |
 
 SEO from `service.seo`. JSON-LD: `Service` with `provider` Organization and `areaServed: site.serviceArea`. No `AggregateRating`.
@@ -783,7 +771,7 @@ Every action returns `{ ok, error? }` and calls `revalidatePath` for its page.
 
 **From / reply-to.** Everything: `From: "{site.ownerFirstName} at {site.name}" <{site.fromEmail}>`. Auto-reply, unlock, and quiz mail set `Reply-To: OWNER_EMAIL`. The owner notification sets `reply_to` to the lead's email so the owner replies directly. Never send from `noreply@`; replies to the daily quiz are a good thing. Section 17 gives `hello@` a real forwarding inbox. `scripts/check-env.ts` refuses a production build while `site.ownerFirstName` or `site.mailingAddress` is still a bracket placeholder (section 15), so no real email ever goes out with "[OWNER FIRST NAME]" in the From header.
 
-**Templates.** Plain TypeScript functions in `lib/email/templates/*` returning `{ subject, html, text }`. No React rendering, no `@react-email/render`. `layout.ts` is a 600px single-column table layout (Outlook desktop safe): navy header with the text wordmark, off-white body, system font stack, amber "bulletproof" table-cell button with navy text, footer with `site.mailingAddress` (CAN-SPAM for list mail) and an unsubscribe line for list mail. Every send includes the text part. Templates: `contact-owner`, `contact-autoreply`, `unlock` (takes `service: ServiceSlug | "guide"`), `daily-quiz`, `no-quiz-alert`, `quota-warning`.
+**Templates.** Plain TypeScript functions in `lib/email/templates/*` returning `{ subject, html, text }`. No React rendering, no `@react-email/render`. `layout.ts` is a 600px single-column table layout (Outlook desktop safe): ink header rule with the text wordmark, paper body, system font stack, an ink "bulletproof" table-cell button with paper text, footer with `site.mailingAddress` (CAN-SPAM for list mail) and an unsubscribe line for list mail. Every send includes the text part. Templates: `contact-owner`, `contact-autoreply`, `unlock` (takes `service: ServiceSlug | "guide"`), `daily-quiz`, `no-quiz-alert`, `quota-warning`.
 
 **`sendEmail()` wrapper** (`lib/email/send.ts`):
 
@@ -827,7 +815,7 @@ A row returned from step 1 means "you own this send": a `failed` row is retried 
 - All admin pages: `robots: noindex`; `X-Robots-Tag: noindex` header for `/admin/:path*` in `next.config.ts`; `robots.ts` disallows `/admin` and `/api`.
 
 **Pages.**
-- `/admin`: counts (new leads, active subscribers, ready quizzes, last send date and status), today's remaining Resend allowance (section 10), a red banner when active subscribers exceed 70 ("Approaching the Resend free-tier daily cap (100/day). Upgrade to Resend Pro before 80 subscribers."), and an amber banner whenever the latest `quiz_sends` row is not `completed` ("Yesterday's/today's send did not finish: N pending, M failed") with a Resume button, so the owner acts the same day.
+- `/admin`: counts (new leads, active subscribers, ready quizzes, last send date and status), today's remaining Resend allowance (section 10), a warning banner when active subscribers exceed 70 ("Approaching the Resend free-tier daily cap (100/day). Upgrade to Resend Pro before 80 subscribers."), and a second banner whenever the latest `quiz_sends` row is not `completed` ("Yesterday's/today's send did not finish: N pending, M failed") with a Resume button, so the owner acts the same day.
 - `/admin/quizzes`: table (slug, question, status, scheduledFor with an "overdue" badge when `scheduled_for < today` and status is `ready`, last sent, answers count and percent correct). Default filter hides `archived`; "Show archived" toggle. Buttons: New, Edit, Delete (only for quizzes with no `quiz_sends` row), Remove (archive) for sent quizzes, and `SendNowButton` in the header. Per row: "Send this one now".
 - `/admin/quizzes/new` and `/admin/quizzes/[id]`: `QuizForm` with question, explanation, 2 to 5 options with a radio for the correct one, slug (auto from `quizSlug(question, scheduledFor ?? today)`, editable), topic, scheduledFor, status, plus a preview panel that renders the daily-quiz template.
 - `/admin/leads`: newest first: date, name, email, phone, service, niche, summary (expandable), status select, attribution popover, "Add to newsletter list" (disabled with label "On list" when `subscriberId` is set).
@@ -1035,7 +1023,7 @@ The Neon integration also injects legacy `POSTGRES_URL` / `PG*` variables; the a
 ### Phase 1: static site (no database; target 1 to 2 weeks)
 1. `npx create-next-app@latest` with TypeScript, Tailwind, App Router, `src/`, ESLint. Pin Next 16.3.x and Tailwind 4.3.x. Add `zod`, Vitest, `tsx`, `@next/bundle-analyzer` (dev), `.nvmrc` = `24`, `engines.node`, `tsconfig` paths alias, `vitest.config.ts` alias, `.env.example`, `README.md`, `.github/workflows/ci.yml`, and the `package.json` scripts from section 3. No Prettier, no Playwright.
 2. `config/site.ts`; `globals.css` tokens (`@theme` plus `@theme inline` for fonts, text scale, heading classes); `layout.tsx` with both font `.variable` classes on `<html>`, `color-scheme: light`, skip link, `metadataBase`, OG and Twitter defaults.
-3. UI components: Wordmark, Button (with `data-tone` styling), Section, Card, Eyebrow, ProsCons, Field, Nav (active underline), MobileMenu, Footer.
+3. UI components: Wordmark, Action, Section, SectionHead, Marker, IndexList, ProsCons, Field, Nav (active underline), MobileMenu, Footer.
 4. Content: `types.ts`, `niches/index.ts` registry with derived slugs and `nichesForService`/`joinNames`, three niche files (with `plural`, `teaser`), four service files (with `pricingLine`, `deepDive.teaser`), `home.ts`, `contact.ts`, `videos.ts` (all `ready: false`, `mediaUrl`), `privacy.ts`.
 5. Owner supplies every bracketed value in `site.ts`, `home.ts`, `contact.ts`, the four service files (honest lines, pricing lines, teasers, revisions policy), and `privacy.ts`; the developer replaces them. Videos may stay placeholders; text may not.
 6. Pages: `/`, `/guide`, `/guide/[niche]`, `/services`, `/services/[service]`, `/learn/[service]` (all three dynamic routes with `dynamicParams = false` and awaited `params`), `/contact` (Phase 1 mailto fallback), `/thank-you`, `/privacy`, `not-found`, `sitemap.ts`, `robots.ts`, `favicon.ico` in `src/app/`.
@@ -1101,7 +1089,7 @@ Do these in order. Keep every key in a password manager; never paste keys into c
 
 **Performance budget.** Lighthouse mobile 90+ all categories; LCP under 2.5 s on 4G throttling; first-party JS under 120 KB gzipped on public pages (no client components on guide pages except `Button` tracking; forms, video, menu, and analytics are the only client components); posters under 120 KB; two font families, six weights total, `display: swap`; no third-party script unless an env var is set. Check with PageSpeed Insights after each phase deploy and `ANALYZE=true npm run build` (wired through `@next/bundle-analyzer` in `next.config.ts`) once per phase.
 
-**Accessibility basics.** One `h1` per page; landmark regions and the skip link; labels on every input; errors linked with `aria-describedby` and `aria-live` on form status; visible focus rings (amber on navy, navy on off-white); amber buttons with navy text at 16px bold minimum; body slate on off-white is well above 7:1; the play control is a real button with a text label; quiz options are radios in a fieldset; honeypot hidden from assistive tech; `prefers-reduced-motion` respected (no animation is used anyway).
+**Accessibility basics.** One `h1` per page; landmark regions and the skip link; labels on every input; errors linked with `aria-describedby` and `aria-live` on form status; visible focus rings (accent everywhere, accent-light on ink); ink buttons with paper text; body ink-soft on paper is well above 7:1; the play control is a real button with a text label; quiz options are radios in a fieldset; honeypot hidden from assistive tech; `prefers-reduced-motion` respected (no animation is used anyway).
 
 **Email deliverability steps, Phase 2 acceptance (unlock and auto-reply templates).** 1) After DNS verification run `npm run email:test -- you@gmail.com` and repeat for an Outlook.com and an iCloud address; inbox or Promotions is fine, Spam is not. 2) In Gmail "Show original" confirm `SPF: PASS`, `DKIM: PASS`, `DMARC: PASS`. 3) Send to a mail-tester.com address; require 9/10 or better. 4) Confirm Gmail shows its "Unsubscribe" link next to the sender on the unlock email (List-Unsubscribe headers). 5) Confirm `Reply-To` lands in the owner inbox.
 

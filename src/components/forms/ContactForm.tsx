@@ -3,15 +3,15 @@
 import { useRouter } from "next/navigation";
 import { useState, type FormEvent } from "react";
 import { site } from "@/config/site";
-import { SERVICE_SLUGS, type ServiceSlug } from "@/content/types";
-import { NICHE_FORM_VALUES, nicheList, type NicheFormValue } from "@/content/niches";
+import type { ServiceSlug } from "@/content/types";
+import { nicheList, type NicheFormValue } from "@/content/niches";
 import { serviceList } from "@/content/services";
 import { contactSchema, fieldErrors } from "@/lib/validation";
 import { publicPhase } from "@/lib/phase";
-import { Field, inputClass } from "@/components/ui/Field";
-import { Button } from "@/components/ui/Button";
-import { Honeypot } from "@/components/forms/Honeypot";
 import { readAttributionCookie } from "@/lib/attribution";
+import { Field } from "@/components/ui/Field";
+import { Action } from "@/components/ui/Action";
+import { Honeypot } from "@/components/forms/Honeypot";
 
 interface Props {
   defaultService?: ServiceSlug;
@@ -20,13 +20,13 @@ interface Props {
 
 type Status = "idle" | "submitting" | "error";
 
-const RATE_LIMIT_COPY = `Too many attempts. Try again later or email us at ${site.contactEmail}.`;
-const GENERIC_ERROR_COPY = `Something went wrong. Email us at ${site.contactEmail}.`;
+const RATE_LIMIT_COPY = `That's a few too many tries. Give it an hour, or write to ${site.contactEmail}.`;
+const GENERIC_ERROR_COPY = `Something broke on our end. Write to ${site.contactEmail} and we'll pick it up there.`;
 
 /**
- * Phase 1: the fields render, but the submit button is a mailto link to the
- * owner's existing inbox, so nothing posts to a route that does not exist yet.
- * Phase 2+: posts JSON to /api/contact and redirects to /thank-you.
+ * Phase 1: the fields render, but submit is a mailto link to the owner's
+ * existing inbox, so nothing posts to a route that does not exist yet.
+ * Phase 2+: posts JSON to /api/contact, then redirects to /thank-you.
  */
 export function ContactForm({ defaultService, defaultNiche }: Props) {
   const router = useRouter();
@@ -86,7 +86,7 @@ export function ContactForm({ defaultService, defaultNiche }: Props) {
           JSON.stringify({ service: parsed.data.service, niche: parsed.data.niche, leadId: json.leadId }),
         );
       } catch {
-        // sessionStorage unavailable; the thank-you page simply fires nothing
+        /* sessionStorage unavailable; the thank-you page simply fires nothing */
       }
       router.push("/thank-you");
     } catch {
@@ -96,29 +96,29 @@ export function ContactForm({ defaultService, defaultNiche }: Props) {
   }
 
   return (
-    <form onSubmit={onSubmit} noValidate className="space-y-6" aria-describedby={formError ? "form-error" : undefined}>
+    <form onSubmit={onSubmit} noValidate className="space-y-9">
       <Field id="name" label="Name" required error={errors.name}>
-        <input id="name" name="name" type="text" autoComplete="name" required className={inputClass} />
+        <input id="name" name="name" type="text" autoComplete="name" required className="control" />
       </Field>
       <Field id="email" label="Email" required error={errors.email}>
-        <input id="email" name="email" type="email" autoComplete="email" required className={inputClass} />
+        <input id="email" name="email" type="email" autoComplete="email" required className="control" />
       </Field>
       <Field id="phone" label="Phone" error={errors.phone}>
-        <input id="phone" name="phone" type="tel" autoComplete="tel" className={inputClass} />
+        <input id="phone" name="phone" type="tel" autoComplete="tel" className="control" />
       </Field>
       <Field
         id="summary"
-        label="What's going on with your marketing right now?"
+        label="What's going on with your marketing"
         required
-        hint="A couple of sentences is plenty. What you have tried, what is not working, what you want more of."
+        hint="What you have tried, what is not working, what you want more of. Two or three sentences is plenty."
         error={errors.summary}
       >
-        <textarea id="summary" name="summary" rows={5} required minLength={20} maxLength={2000} className={inputClass} />
+        <textarea id="summary" name="summary" rows={5} required minLength={20} maxLength={2000} className="control" />
       </Field>
-      <div className="grid gap-6 md:grid-cols-2">
-        <Field id="service" label="Service you're interested in" error={errors.service}>
-          <select id="service" name="service" defaultValue={defaultService ?? ""} className={inputClass}>
-            <option value="">Not sure</option>
+      <div className="grid gap-9 sm:grid-cols-2">
+        <Field id="service" label="Service in mind" error={errors.service}>
+          <select id="service" name="service" defaultValue={defaultService ?? ""} className="control">
+            <option value="">Not sure yet</option>
             {serviceList.map((s) => (
               <option key={s.slug} value={s.slug}>
                 {s.name}
@@ -126,52 +126,50 @@ export function ContactForm({ defaultService, defaultNiche }: Props) {
             ))}
           </select>
         </Field>
-        <Field id="niche" label="Your industry" error={errors.niche}>
-          <select id="niche" name="niche" defaultValue={defaultNiche ?? ""} className={inputClass}>
+        <Field id="niche" label="Your trade" error={errors.niche}>
+          <select id="niche" name="niche" defaultValue={defaultNiche ?? ""} className="control">
             <option value="">Choose one</option>
             {nicheList.map((n) => (
               <option key={n.slug} value={n.slug}>
                 {n.name}
               </option>
             ))}
-            <option value="other">Other</option>
+            <option value="other">Something else</option>
           </select>
         </Field>
       </div>
       <Honeypot />
 
       {formError && (
-        <p id="form-error" role="alert" className="text-error">
+        <p role="alert" className="text-accent">
           {formError}
         </p>
       )}
 
       {phase < 2 ? (
-        <div className="space-y-3">
-          <Button href={`mailto:${site.contactEmail}?subject=${encodeURIComponent("Fit check")}`}>Email us</Button>
+        <div className="space-y-4 pt-2">
+          <Action href={`mailto:${site.contactEmail}?subject=${encodeURIComponent("Fit check")}`}>
+            Send this by email
+          </Action>
           <p className="text-sm text-muted">
-            Or write to{" "}
-            <a className="underline" href={`mailto:${site.contactEmail}`}>
+            The form goes live shortly. Until then, write to{" "}
+            <a className="link" href={`mailto:${site.contactEmail}`}>
               {site.contactEmail}
             </a>
             .
           </p>
         </div>
       ) : (
-        <Button type="submit" disabled={status === "submitting"} trackEvent={false}>
-          {status === "submitting" ? "Sending…" : "Send it over"}
-        </Button>
+        <div className="pt-2">
+          <Action type="submit" disabled={status === "submitting"} trackEvent={false}>
+            {status === "submitting" ? "Sending" : "Send it over"}
+          </Action>
+        </div>
       )}
 
       <noscript>
-        <p className="text-sm text-muted">
-          Enable JavaScript to send this form, or email {site.contactEmail}.
-        </p>
+        <p className="text-sm text-muted">Turn on JavaScript to send this form, or email {site.contactEmail}.</p>
       </noscript>
     </form>
   );
 }
-
-// Re-exported for prefill validation on the server page.
-export const CONTACT_SERVICE_VALUES = SERVICE_SLUGS;
-export const CONTACT_NICHE_VALUES = NICHE_FORM_VALUES;

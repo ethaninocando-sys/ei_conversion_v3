@@ -8,7 +8,7 @@ import { track } from "@/lib/analytics";
 
 interface Props {
   slot: VideoSlotKey;
-  /** Only the home hero poster should be priority-loaded. */
+  /** Only the home film should be priority-loaded. */
   priority?: boolean;
 }
 
@@ -20,9 +20,8 @@ function formatDuration(seconds?: number): string | null {
 }
 
 /**
- * Native player. Before intent: poster + a real button. No <video> element,
- * not even metadata, loads before the click. When the slot is not ready or
- * the media base URL is unset, a neutral "coming soon" card renders instead.
+ * Square-cornered frame, hairline border, ink play block. Before the click
+ * there is no <video> element at all, so no MP4 bytes load, not even metadata.
  */
 export function VideoPlayer({ slot, priority = false }: Props) {
   const meta = videos[slot];
@@ -33,25 +32,22 @@ export function VideoPlayer({ slot, priority = false }: Props) {
 
   useEffect(() => {
     if (!playing) return;
-    const v = videoRef.current;
-    if (!v) return;
-    v.play().catch(() => {
-      // Autoplay policies can reject; the controls remain usable.
+    videoRef.current?.play().catch(() => {
+      /* autoplay policy can reject; the controls still work */
     });
   }, [playing]);
 
   if (!media) {
     return (
-      <div
-        className="flex aspect-video w-full items-center justify-center rounded-lg border border-line bg-white"
-        role="img"
-        aria-label={`${meta.title}. Video coming soon.`}
-      >
-        <div className="px-6 text-center">
-          <p className="h3 text-navy">{meta.title}</p>
-          <p className="mt-2 text-muted">Video coming soon</p>
+      <figure className="border border-rule bg-paper-dim">
+        <div className="flex aspect-video w-full items-end p-6 md:p-8">
+          <figcaption>
+            <p className="marker">Film</p>
+            <p className="display display-md mt-2 max-w-md">{meta.title}</p>
+            <p className="mt-3 text-muted">Not recorded yet.</p>
+          </figcaption>
         </div>
-      </div>
+      </figure>
     );
   }
 
@@ -61,7 +57,7 @@ export function VideoPlayer({ slot, priority = false }: Props) {
     return (
       <video
         ref={videoRef}
-        className="aspect-video w-full rounded-lg bg-black"
+        className="aspect-video w-full border border-rule bg-ink"
         controls
         playsInline
         preload="none"
@@ -91,33 +87,29 @@ export function VideoPlayer({ slot, priority = false }: Props) {
   }
 
   return (
-    <div className="relative aspect-video w-full overflow-hidden rounded-lg bg-navy">
+    <div className="relative aspect-video w-full overflow-hidden border border-rule bg-ink">
       <Image
         src={media.poster}
         alt=""
         fill
-        sizes="(min-width: 1152px) 1152px, 100vw"
+        sizes="(min-width: 1248px) 1248px, 100vw"
         priority={priority}
-        className="object-cover"
+        className="object-cover opacity-90"
       />
       <button
         type="button"
-        className="absolute inset-0 flex items-center justify-center bg-navy/20 transition-colors hover:bg-navy/30"
+        className="absolute inset-0 flex items-end p-6 text-left md:p-8"
         onClick={() => {
           track("video_play", { slot });
           setPlaying(true);
         }}
       >
-        <span className="inline-flex items-center gap-3 rounded-md bg-amber px-5 py-3 font-semibold text-navy">
+        <span className="action">
           <span aria-hidden="true">&#9654;</span>
-          <span>Play video: {meta.title}</span>
+          Play: {meta.title}
         </span>
       </button>
-      {duration && (
-        <span className="absolute bottom-3 right-3 rounded-sm bg-navy/80 px-2 py-1 text-xs text-offwhite">
-          {duration}
-        </span>
-      )}
+      {duration && <span className="marker absolute right-5 top-5 !text-paper/70">{duration}</span>}
     </div>
   );
 }

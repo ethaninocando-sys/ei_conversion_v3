@@ -6,8 +6,9 @@ import { services, isServiceSlug } from "@/content/services";
 import { nichesForService } from "@/content/niches";
 import { buildMetadata, breadcrumbJsonLd, serviceJsonLd } from "@/lib/seo";
 import { publicPhase } from "@/lib/phase";
-import { Section } from "@/components/ui/Section";
-import { Button } from "@/components/ui/Button";
+import { Section, SectionHead } from "@/components/ui/Section";
+import { Marker } from "@/components/ui/Marker";
+import { Action } from "@/components/ui/Action";
 import { JsonLd } from "@/components/ui/JsonLd";
 import { VideoPlayer } from "@/components/media/VideoPlayer";
 import { EmailCapture } from "@/components/forms/EmailCapture";
@@ -46,58 +47,57 @@ export default async function ServicePage({ params }: { params: Promise<Params> 
         ])}
       />
 
-      <Section tone="navy">
-        <div className="max-w-3xl">
-          <p className="eyebrow mb-4">Service</p>
-          <h1 className="h1">{s.name}</h1>
-          <p className="mt-6 text-lg text-offwhite/85 md:text-xl">{s.promise}</p>
+      <Section className="pb-12 pt-14 md:pb-16 md:pt-24">
+        <div className="grid gap-x-5 gap-y-10 md:grid-cols-12">
+          <div className="md:col-span-8">
+            <Marker>Service</Marker>
+            <h1 className="display display-xl mt-7">{s.name}</h1>
+          </div>
+          <div className="md:col-span-4 md:self-end">
+            <p className="lede">{s.promise}</p>
+          </div>
         </div>
       </Section>
 
-      <Section tone="white">
+      <Section className="pb-16 md:pb-24">
         <VideoPlayer slot={`services.${service}.short`} />
       </Section>
 
-      <Section tone="offwhite" heading="What is included">
-        <ul className="grid gap-3 md:grid-cols-2">
-          {s.included.map((item) => (
-            <li key={item} className="flex gap-3">
-              <span aria-hidden="true" className="mt-1 text-success">
-                &#10003;
-              </span>
-              <span>{item}</span>
-            </li>
-          ))}
-        </ul>
-        {s.honestLine && (
-          <p className="mt-8 max-w-3xl rounded-md border border-line bg-white p-5 text-slate">{s.honestLine}</p>
-        )}
+      <Section ground="dim" className="py-16 md:py-24">
+        <SectionHead index={1} marker="Included" title="What you actually get" />
+        <div className="mt-12 grid gap-x-5 md:grid-cols-12">
+          <ul className="border-t border-rule md:col-span-8 md:col-start-4">
+            {s.included.map((item) => (
+              <li key={item} className="border-b border-rule py-4">
+                {item}
+              </li>
+            ))}
+          </ul>
+          {s.honestLine && (
+            <p className="lede mt-10 border-l-2 border-accent pl-6 md:col-span-8 md:col-start-4">{s.honestLine}</p>
+          )}
+        </div>
       </Section>
 
-      <Section tone="white" heading="Is it a fit?">
-        <div className="grid gap-8 md:grid-cols-2">
+      <Section className="py-16 md:py-24">
+        <SectionHead index={2} marker="Fit" title="Who this is for" />
+        <div className="mt-12 grid gap-x-10 gap-y-10 md:grid-cols-2">
           <div>
-            <p className="eyebrow mb-3">A good fit if</p>
-            <ul className="space-y-2">
+            <p className="marker mb-4">Worth your money if</p>
+            <ul className="space-y-3 text-ink-soft">
               {s.goodFit.map((g) => (
-                <li key={g} className="flex gap-3">
-                  <span aria-hidden="true" className="mt-1 text-success">
-                    &#10003;
-                  </span>
-                  <span>{g}</span>
+                <li key={g} className="border-t border-rule pt-3 first:border-t-0 first:pt-0">
+                  {g}
                 </li>
               ))}
             </ul>
           </div>
-          <div>
-            <p className="eyebrow mb-3">Not a fit if</p>
-            <ul className="space-y-2">
+          <div className="md:border-l md:border-rule md:pl-10">
+            <p className="marker mb-4">Don&rsquo;t bother if</p>
+            <ul className="space-y-3 text-ink-soft">
               {s.notFit.map((g) => (
-                <li key={g} className="flex gap-3">
-                  <span aria-hidden="true" className="mt-1 text-muted">
-                    &ndash;
-                  </span>
-                  <span>{g}</span>
+                <li key={g} className="border-t border-rule pt-3 first:border-t-0 first:pt-0">
+                  {g}
                 </li>
               ))}
             </ul>
@@ -105,55 +105,74 @@ export default async function ServicePage({ params }: { params: Promise<Params> 
         </div>
       </Section>
 
-      <Section tone="offwhite" heading="How we work">
-        <ol className="space-y-4">
-          {s.process.map((step, i) => (
-            <li key={step} className="flex gap-4">
-              <span className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-md bg-amber font-heading font-bold text-navy">
-                {i + 1}
-              </span>
-              <span className="pt-1">{step}</span>
-            </li>
-          ))}
-        </ol>
-        <p className="mt-8 text-muted">{s.pricingLine}</p>
+      <Section ground="dim" className="py-16 md:py-24">
+        <SectionHead index={3} marker="Process" title="How we work" />
+        <div className="mt-12 grid gap-x-5 gap-y-10 md:grid-cols-12">
+          <ol className="md:col-span-7">
+            {s.process.map((step, i) => (
+              <li key={step} className="grid grid-cols-12 gap-x-5 border-t border-rule py-6">
+                <span className="numeral col-span-2 text-xl md:col-span-1">{String(i + 1).padStart(2, "0")}</span>
+                <span className="col-span-10 md:col-span-11">{step}</span>
+              </li>
+            ))}
+          </ol>
+          <aside className="md:col-span-4 md:col-start-9">
+            <p className="marker">What it costs</p>
+            <p className="mt-4 text-ink-soft">{s.pricingLine}</p>
+          </aside>
+        </div>
       </Section>
 
       {fits.length > 0 && (
-        <Section tone="white" heading="Which trades it fits">
-          <ul className="flex flex-wrap gap-3">
-            {fits.map((n) => (
-              <li key={n.slug}>
-                <Link
-                  href={`/guide/${n.slug}`}
-                  className="inline-block rounded-md border border-line bg-white px-4 py-2 font-semibold text-navy hover:border-navy"
-                >
-                  {n.name} guide &rarr;
-                </Link>
-              </li>
-            ))}
-          </ul>
+        <Section className="py-16 md:py-20">
+          <div className="grid gap-x-5 gap-y-5 md:grid-cols-12">
+            <p className="marker md:col-span-3">Trades it suits</p>
+            <ul className="flex flex-wrap gap-x-8 gap-y-3 md:col-span-9">
+              {fits.map((n) => (
+                <li key={n.slug}>
+                  <Link href={`/guide/${n.slug}`} className="display display-md link">
+                    {n.name}
+                  </Link>
+                </li>
+              ))}
+            </ul>
+          </div>
         </Section>
       )}
 
-      <Section tone="navy" heading={`Watch the full ${s.name} walkthrough`}>
-        <p className="mb-6 max-w-2xl text-lg text-offwhite/85">
-          The in-depth video covers {s.deepDive.teaser}.{" "}
-          {phase >= 2 ? "Enter your email and we will send the link." : ""}
-        </p>
-        {phase >= 2 ? (
-          <div className="max-w-2xl">
-            <EmailCapture service={service} headline="Your email" buttonLabel="Send me the video" />
+      <Section ground="ink" className="py-20 md:py-28">
+        <div className="grid gap-x-5 gap-y-10 md:grid-cols-12">
+          <div className="md:col-span-3">
+            <Marker index={4}>The long version</Marker>
           </div>
-        ) : (
-          <Button href={`/learn/${service}`} variant="secondary">
-            Watch the full walkthrough
-          </Button>
-        )}
+          <div className="md:col-span-9">
+            <p className="display display-lg">The full {s.name} walkthrough.</p>
+            <p className="lede mt-5 measure !text-paper/75">
+              It covers {s.deepDive.teaser}. {phase >= 2 ? "Leave an email and we will send you the link." : ""}
+            </p>
+            <div className="mt-10">
+              {phase >= 2 ? (
+                <EmailCapture service={service} headline="Your email" buttonLabel="Send me the film" />
+              ) : (
+                <Action href={`/learn/${service}`} variant="outline">
+                  Watch the walkthrough
+                </Action>
+              )}
+            </div>
+          </div>
+        </div>
       </Section>
 
-      <Section tone="white" heading="Think this might be the one?">
-        <Button href={`/contact?service=${service}`}>See if we&rsquo;re a fit</Button>
+      <Section className="py-16 md:py-24">
+        <div className="grid gap-x-5 gap-y-6 md:grid-cols-12">
+          <p className="marker md:col-span-3">Talk to us</p>
+          <div className="md:col-span-9">
+            <p className="display display-lg">Think this is the one?</p>
+            <div className="mt-8">
+              <Action href={`/contact?service=${service}`}>See if we&rsquo;re a fit</Action>
+            </div>
+          </div>
+        </div>
       </Section>
     </>
   );

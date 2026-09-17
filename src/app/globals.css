@@ -1,194 +1,336 @@
 @import "tailwindcss";
 
 /*
- * Design tokens. Tailwind 4 CSS-first config; there is no tailwind.config.ts.
- * The two font tokens reference next/font variables, so they must live in
- * @theme inline, otherwise Tailwind resolves var(--font-manrope) at :root
- * where it is not defined and headings silently fall back.
+ * Editorial system. Print logic, not app-chrome logic.
+ *
+ * Rules of the house:
+ *   - Paper ground, ink type, one deep accent. No gradients.
+ *   - Hairline rules do the structural work. There are no cards.
+ *   - Nothing is rounded. border-radius is 0 everywhere, on purpose.
+ *   - One dark block per page, maximum. Sections are not alternating bands.
+ *   - Display type is set large and tight; body is set quiet and roomy.
  */
 @theme {
-  --color-navy: #0b1f3a;        /* nav, footer, hero and CTA bands, headings on light */
-  --color-navy-700: #14305a;    /* hover on navy */
-  --color-offwhite: #f8fafc;    /* page background */
-  --color-amber: #f59e0b;       /* primary CTA fill only */
-  --color-amber-dark: #b45309;  /* CTA hover; amber-as-text on light backgrounds (AA) */
-  --color-slate: #1e293b;       /* body text */
-  --color-muted: #64748b;       /* captions, eyebrows */
-  --color-line: #e2e8f0;        /* borders */
-  --color-white: #ffffff;       /* cards */
-  --color-success: #15803d;     /* form success only */
-  --color-error: #b91c1c;       /* form error text only, never marketing */
+  --color-paper: #fbfaf7;       /* warm page ground */
+  --color-paper-dim: #f2efe8;   /* a second, quieter ground */
+  --color-ink: #14110f;         /* near-black, warm */
+  --color-ink-soft: #3a342e;    /* secondary type on paper */
+  --color-muted: #5f584f;       /* captions, labels (AA on paper) */
+  --color-muted-ink: #a8a29a;   /* the same, on ink */
+  --color-rule: #d8d2c7;        /* hairline */
+  --color-rule-dark: #33302c;   /* hairline on ink */
+  --color-accent: #8b2e1f;      /* oxblood, on paper only */
+  --color-accent-light: #e08a70;/* accent on ink, lightened to clear 4.5:1 */
 
-  --radius-sm: 6px;
-  --radius-md: 10px;
-  --radius-lg: 16px;
+  --radius-none: 0px;
 
-  --text-base: 1.0625rem;       /* 17px body on mobile */
-  --text-base--line-height: 1.6;
+  --text-base: 1.0625rem;
+  --text-base--line-height: 1.7;
 }
 
 @theme inline {
-  --font-heading: var(--font-manrope);
-  --font-body: var(--font-inter);
+  --font-display: var(--font-fraunces);
+  --font-sans: var(--font-archivo);
 }
 
 html {
   color-scheme: light;
-  scroll-behavior: smooth;
 }
-
-@media (min-width: 768px) {
+@media (min-width: 900px) {
   html {
-    font-size: 18px; /* body 18px on desktop; rem scale follows */
+    font-size: 17.5px;
   }
 }
-
 @media (prefers-reduced-motion: reduce) {
-  html {
-    scroll-behavior: auto;
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
   }
 }
 
 body {
-  background: var(--color-offwhite);
-  color: var(--color-slate);
-  font-family: var(--font-body);
+  background: var(--color-paper);
+  color: var(--color-ink);
+  font-family: var(--font-sans);
+  font-feature-settings: "kern", "liga";
   -webkit-font-smoothing: antialiased;
 }
 
-.h1 {
-  font-family: var(--font-heading);
-  font-weight: 800;
-  font-size: 2.25rem;
-  line-height: 1.1;
+/* ---------- Display type ---------- */
+
+.display {
+  font-family: var(--font-display);
+  font-optical-sizing: auto;
+  font-weight: 600;
+  letter-spacing: -0.025em;
+  line-height: 0.98;
+  text-wrap: balance;
+}
+.display-xl {
+  font-size: clamp(2.75rem, 7.4vw, 5.75rem);
+}
+.display-lg {
+  font-size: clamp(2.125rem, 4.6vw, 3.5rem);
+  line-height: 1.02;
+}
+.display-md {
+  font-size: clamp(1.5rem, 2.6vw, 2rem);
+  line-height: 1.08;
   letter-spacing: -0.02em;
 }
-.h2 {
-  font-family: var(--font-heading);
-  font-weight: 700;
-  font-size: 1.75rem;
-  line-height: 1.2;
-  letter-spacing: -0.01em;
-}
-.h3 {
-  font-family: var(--font-heading);
-  font-weight: 700;
+.display-sm {
   font-size: 1.25rem;
-  line-height: 1.3;
-}
-@media (min-width: 768px) {
-  .h1 { font-size: 3.5rem; }
-  .h2 { font-size: 2.5rem; }
-  .h3 { font-size: 1.5rem; }
+  line-height: 1.2;
+  letter-spacing: -0.015em;
+  font-weight: 600;
 }
 
-.eyebrow {
-  font-size: 0.8125rem;
+/* Editorial lede: the paragraph directly under a display heading. */
+.lede {
+  font-size: clamp(1.125rem, 1.6vw, 1.375rem);
+  line-height: 1.55;
+  color: var(--color-ink-soft);
+  text-wrap: pretty;
+}
+
+/* Small tracked label. Section markers, eyebrows, column heads. */
+.marker {
+  font-size: 0.6875rem;
   font-weight: 600;
-  letter-spacing: 0.08em;
+  letter-spacing: 0.17em;
   text-transform: uppercase;
   color: var(--color-muted);
+  font-feature-settings: "tnum";
 }
 
-/* Buttons. Primary is amber with navy text (AA at 16px bold). */
-.btn {
+/* Big marginal numeral, set in the display face. */
+.numeral {
+  font-family: var(--font-display);
+  font-weight: 500;
+  font-variant-numeric: tabular-nums;
+  color: var(--color-accent);
+  line-height: 1;
+}
+
+.measure {
+  max-width: 34em;
+}
+.measure-tight {
+  max-width: 26em;
+}
+
+/* ---------- Rules ---------- */
+
+.rule {
+  border: 0;
+  border-top: 1px solid var(--color-rule);
+}
+.rule-strong {
+  border-top-color: var(--color-ink);
+}
+[data-ground="ink"] .rule {
+  border-top-color: var(--color-rule-dark);
+}
+
+/*
+ * Anything tuned for paper has to be re-tuned on ink, or it fails contrast.
+ * These three rules are why an ink section needs no per-element overrides.
+ */
+[data-ground="ink"] .marker {
+  color: var(--color-muted-ink);
+}
+[data-ground="ink"] .numeral,
+[data-ground="ink"] .text-accent {
+  color: var(--color-accent-light);
+}
+[data-ground="ink"] .link {
+  text-decoration-color: var(--color-rule-dark);
+}
+
+/* ---------- Actions ---------- */
+
+/* Primary: a solid ink rectangle. No radius, no shadow, no gradient. */
+.action {
   display: inline-flex;
   align-items: center;
-  justify-content: center;
-  gap: 0.5rem;
-  min-height: 48px;
-  padding: 0.75rem 1.5rem;
-  border-radius: var(--radius-md);
+  gap: 0.75rem;
+  min-height: 3rem;
+  padding: 0.875rem 1.5rem;
+  background: var(--color-ink);
+  color: var(--color-paper);
+  font-size: 0.9375rem;
   font-weight: 600;
-  font-size: 1rem;
-  line-height: 1.2;
+  letter-spacing: 0.01em;
   text-decoration: none;
-  border: 1px solid transparent;
-  transition: background-color 120ms ease, color 120ms ease, border-color 120ms ease;
+  border: 1px solid var(--color-ink);
+  transition: background-color 140ms ease, border-color 140ms ease, color 140ms ease;
   cursor: pointer;
 }
-.btn:focus-visible {
-  outline: 3px solid var(--color-amber);
-  outline-offset: 3px;
+.action:hover {
+  background: var(--color-accent);
+  border-color: var(--color-accent);
 }
-.btn-primary {
-  background: var(--color-amber);
-  color: var(--color-navy);
+.action:disabled {
+  opacity: 0.55;
+  cursor: default;
 }
-.btn-primary:hover {
-  background: #fbbf24;
+[data-ground="ink"] .action {
+  background: var(--color-paper);
+  color: var(--color-ink);
+  border-color: var(--color-paper);
 }
-.btn-secondary {
+[data-ground="ink"] .action:hover {
+  background: var(--color-accent-light);
+  border-color: var(--color-accent-light);
+}
+
+/* Outline: the same rectangle, drawn not filled. */
+.action-outline {
   background: transparent;
-  color: var(--color-navy);
-  border-color: var(--color-navy);
+  color: var(--color-ink);
+  border-color: var(--color-ink);
 }
-.btn-secondary:hover {
-  background: rgba(11, 31, 58, 0.06);
+.action-outline:hover {
+  background: var(--color-ink);
+  color: var(--color-paper);
 }
-.btn-ghost {
+[data-ground="ink"] .action-outline {
   background: transparent;
-  color: var(--color-navy);
-  padding-left: 0.5rem;
-  padding-right: 0.5rem;
+  color: var(--color-paper);
+  border-color: var(--color-rule-dark);
 }
-.btn-ghost:hover {
+[data-ground="ink"] .action-outline:hover {
+  background: var(--color-paper);
+  color: var(--color-ink);
+  border-color: var(--color-paper);
+}
+
+/* Quiet: an underlined text link with an arrow. The secondary action. */
+.action-quiet {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 0.5rem;
+  min-height: 0;
+  padding: 0;
+  background: none;
+  border: 0;
+  color: var(--color-accent);
+  font-weight: 600;
+  font-size: 0.9375rem;
   text-decoration: underline;
+  text-underline-offset: 0.35em;
+  text-decoration-thickness: 1px;
+}
+.action-quiet:hover {
+  background: none;
+  color: var(--color-ink);
+  text-decoration-thickness: 2px;
+}
+[data-ground="ink"] .action-quiet {
+  color: var(--color-accent-light);
+  background: none;
+  border: 0;
+}
+[data-ground="ink"] .action-quiet:hover {
+  background: none;
+  color: var(--color-paper);
 }
 
-/* Inside a navy Section, outline and ghost buttons switch to off-white. */
-[data-tone="navy"] {
-  color: var(--color-offwhite);
+/* ---------- Links and focus ---------- */
+
+.link {
+  color: inherit;
+  text-decoration: underline;
+  text-underline-offset: 0.25em;
+  text-decoration-thickness: 1px;
+  text-decoration-color: var(--color-rule);
 }
-[data-tone="navy"] .eyebrow {
-  color: rgba(248, 250, 252, 0.72);
-}
-[data-tone="navy"] .btn-secondary {
-  border-color: var(--color-offwhite);
-  color: var(--color-offwhite);
-}
-[data-tone="navy"] .btn-secondary:hover {
-  background: rgba(248, 250, 252, 0.1);
-}
-[data-tone="navy"] .btn-ghost {
-  color: var(--color-offwhite);
-}
-[data-tone="navy"] .btn:focus-visible {
-  outline-color: var(--color-amber);
+.link:hover {
+  text-decoration-color: currentColor;
 }
 
-/* Focus ring on light backgrounds for non-button interactive elements. */
 a:focus-visible,
 button:focus-visible,
 input:focus-visible,
 select:focus-visible,
-textarea:focus-visible {
-  outline: 3px solid var(--color-navy);
-  outline-offset: 2px;
+textarea:focus-visible,
+summary:focus-visible {
+  outline: 2px solid var(--color-accent);
+  outline-offset: 3px;
 }
-[data-tone="navy"] a:focus-visible {
-  outline-color: var(--color-amber);
+[data-ground="ink"] a:focus-visible,
+[data-ground="ink"] button:focus-visible,
+[data-ground="ink"] input:focus-visible {
+  outline-color: var(--color-accent-light);
 }
 
-.prose-measure {
-  max-width: 65ch;
+/* ---------- Form controls: underline only, never a box ---------- */
+
+.control {
+  display: block;
+  width: 100%;
+  padding: 0.625rem 0;
+  background: transparent;
+  border: 0;
+  border-bottom: 1px solid var(--color-rule);
+  color: var(--color-ink);
+  font-family: inherit;
+  font-size: 1.0625rem;
+  line-height: 1.5;
+  border-radius: 0;
+  transition: border-color 140ms ease;
 }
+.control:hover {
+  border-bottom-color: var(--color-muted);
+}
+.control:focus {
+  border-bottom-color: var(--color-accent);
+  outline-offset: 4px;
+}
+.control::placeholder {
+  color: var(--color-muted);
+  opacity: 0.75;
+}
+select.control {
+  appearance: none;
+  background-image: linear-gradient(45deg, transparent 50%, var(--color-ink) 50%),
+    linear-gradient(135deg, var(--color-ink) 50%, transparent 50%);
+  background-position: calc(100% - 10px) calc(50% + 1px), calc(100% - 5px) calc(50% + 1px);
+  background-size: 5px 5px, 5px 5px;
+  background-repeat: no-repeat;
+  padding-right: 1.5rem;
+}
+textarea.control {
+  resize: vertical;
+}
+[data-ground="ink"] .control {
+  border-bottom-color: var(--color-rule-dark);
+  color: var(--color-paper);
+}
+[data-ground="ink"] .control:focus {
+  border-bottom-color: var(--color-accent-light);
+}
+[data-ground="ink"] .control::placeholder {
+  color: var(--color-rule-dark);
+}
+
+/* ---------- Utilities ---------- */
 
 .skip-link {
   position: absolute;
   left: 1rem;
   top: -100px;
   z-index: 100;
-  padding: 0.5rem 1rem;
-  background: var(--color-navy);
-  color: var(--color-offwhite);
-  border-radius: var(--radius-sm);
+  padding: 0.75rem 1.25rem;
+  background: var(--color-ink);
+  color: var(--color-paper);
 }
 .skip-link:focus {
   top: 1rem;
 }
 
-/* Visually hidden but available to assistive tech. */
 .sr-only-field {
   position: absolute !important;
   width: 1px;

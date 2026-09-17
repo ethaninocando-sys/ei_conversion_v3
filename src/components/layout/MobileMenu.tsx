@@ -10,7 +10,7 @@ const LINKS = [
   { label: "Contact", href: "/contact" },
 ];
 
-/** Below md: a button that opens a full-width panel. Focus trap, Esc closes, no library. */
+/** Below md, links collapse into a full-width sheet. Focus trap, Esc closes, no library. */
 export function MobileMenu({ pathname }: { pathname: string }) {
   const [open, setOpen] = useState(false);
   const panelRef = useRef<HTMLDivElement>(null);
@@ -18,8 +18,7 @@ export function MobileMenu({ pathname }: { pathname: string }) {
 
   useEffect(() => {
     if (!open) return;
-    const panel = panelRef.current;
-    const focusables = panel?.querySelectorAll<HTMLElement>("a, button");
+    const focusables = panelRef.current?.querySelectorAll<HTMLElement>("a, button");
     focusables?.[0]?.focus();
 
     const onKey = (e: KeyboardEvent) => {
@@ -49,7 +48,7 @@ export function MobileMenu({ pathname }: { pathname: string }) {
       <button
         ref={buttonRef}
         type="button"
-        className="btn btn-secondary !min-h-11 !px-3 !py-2"
+        className="marker !text-[0.75rem] !text-ink"
         aria-expanded={open}
         aria-controls="mobile-menu"
         onClick={() => setOpen((v) => !v)}
@@ -62,9 +61,9 @@ export function MobileMenu({ pathname }: { pathname: string }) {
           id="mobile-menu"
           role="dialog"
           aria-label="Site menu"
-          className="absolute inset-x-0 top-16 border-b border-line bg-offwhite px-4 pb-6 pt-2 shadow-none"
+          className="absolute inset-x-0 top-[4.5rem] z-50 border-b border-rule bg-paper px-5 pb-8"
         >
-          <ul className="flex flex-col">
+          <ul>
             {LINKS.map((l) => {
               const active = pathname === l.href || (l.href !== "/" && pathname.startsWith(`${l.href}/`));
               return (
@@ -73,19 +72,14 @@ export function MobileMenu({ pathname }: { pathname: string }) {
                     href={l.href}
                     aria-current={active ? "page" : undefined}
                     onClick={() => setOpen(false)}
-                    className={`block border-b border-line py-4 text-lg font-medium text-navy ${
-                      active ? "underline decoration-amber decoration-2 underline-offset-4" : ""
-                    }`}
+                    className="display display-md block border-b border-rule py-5"
                   >
-                    {l.label}
+                    <span className={active ? "text-accent" : ""}>{l.label}</span>
                   </Link>
                 </li>
               );
             })}
           </ul>
-          <button type="button" className="btn btn-ghost mt-4 w-full" onClick={() => setOpen(false)}>
-            Close menu
-          </button>
         </div>
       )}
     </div>

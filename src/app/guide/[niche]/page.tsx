@@ -2,10 +2,11 @@ import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { niches, NICHE_SLUGS, isNicheSlug } from "@/content/niches";
 import { buildMetadata, articleJsonLd, breadcrumbJsonLd } from "@/lib/seo";
-import { Section } from "@/components/ui/Section";
-import { Button } from "@/components/ui/Button";
+import { Section, SectionHead } from "@/components/ui/Section";
+import { Marker } from "@/components/ui/Marker";
+import { Action } from "@/components/ui/Action";
 import { JsonLd } from "@/components/ui/JsonLd";
-import { ServiceFitCard } from "@/components/guide/ServiceFitCard";
+import { FitRow } from "@/components/guide/FitRow";
 import { StartingMix } from "@/components/guide/StartingMix";
 
 type Params = { niche: string };
@@ -41,45 +42,69 @@ export default async function NichePage({ params }: { params: Promise<Params> })
         ])}
       />
 
-      <Section tone="navy">
-        <div className="max-w-3xl">
-          <p className="eyebrow mb-4">Guide: {n.name}</p>
-          <h1 className="h1">{n.headline}</h1>
-          <p className="mt-6 text-lg text-offwhite/85 md:text-xl">{n.intro}</p>
+      <Section className="pb-14 pt-14 md:pb-20 md:pt-24">
+        <div className="grid gap-x-5 gap-y-10 md:grid-cols-12">
+          <div className="md:col-span-8">
+            <Marker>{`Guide \u00b7 ${n.name}`}</Marker>
+            <h1 className="display display-xl mt-7">{n.headline}</h1>
+          </div>
+          <div className="md:col-span-4 md:self-end">
+            <p className="lede">{n.intro}</p>
+          </div>
         </div>
       </Section>
 
-      <Section tone="white" heading={`How ${n.name.toLowerCase()} customers actually buy`}>
-        <ul className="prose-measure space-y-3">
-          {n.buyerContext.map((b) => (
-            <li key={b} className="flex gap-3">
-              <span aria-hidden="true" className="mt-1 text-amber-dark">
-                &#9632;
-              </span>
-              <span>{b}</span>
+      <Section ground="dim" className="py-16 md:py-24">
+        <SectionHead index={1} marker="The buyer" title={`How ${n.name.toLowerCase()} customers actually buy`} />
+        <ol className="mt-12 border-t border-rule">
+          {n.buyerContext.map((b, i) => (
+            <li key={b} className="grid grid-cols-12 gap-x-5 border-b border-rule py-6">
+              <span className="numeral col-span-2 text-lg md:col-span-1">{String(i + 1).padStart(2, "0")}</span>
+              <span className="col-span-10 md:col-span-8">{b}</span>
             </li>
           ))}
-        </ul>
+        </ol>
       </Section>
 
-      <Section tone="offwhite" heading={`All four services, ranked for ${n.name.toLowerCase()}`}>
-        <div className="space-y-6">
+      <Section className="py-16 md:py-24">
+        <SectionHead
+          index={2}
+          marker="The ranking"
+          title={`All four, ranked for ${n.name.toLowerCase()}`}
+          lede="Ordered by what we would spend your first money on. Every one has a cost column, including the ones we rank first."
+        />
+        <div className="mt-14">
           {ranked.map((fit) => (
-            <ServiceFitCard key={fit.service} fit={fit} />
+            <FitRow key={fit.service} fit={fit} />
           ))}
         </div>
       </Section>
 
-      <Section tone="white" heading={n.startingMix.title}>
-        <StartingMix mix={n.startingMix} />
+      <Section ground="dim" className="py-16 md:py-24">
+        <SectionHead index={3} marker="The order" title={n.startingMix.title} />
+        <div className="mt-12">
+          <StartingMix mix={n.startingMix} />
+        </div>
       </Section>
 
-      <Section tone="navy" heading="Want us to look at your specific situation?">
-        <div className="flex flex-wrap gap-3">
-          <Button href={`/contact?niche=${niche}`}>See if we&rsquo;re a fit</Button>
-          <Button href="/services" variant="ghost">
-            Compare the services &rarr;
-          </Button>
+      <Section ground="ink" className="py-20 md:py-28">
+        <div className="grid gap-x-5 gap-y-10 md:grid-cols-12">
+          <div className="md:col-span-3">
+            <Marker index={4}>Next</Marker>
+          </div>
+          <div className="md:col-span-9">
+            <p className="display display-lg">Want this applied to your actual numbers?</p>
+            <p className="lede mt-5 measure !text-paper/75">
+              Tell us about the business and we will say, in writing, whether we can help and what we would do first.
+              If the answer is no, you get that in writing too.
+            </p>
+            <div className="mt-10 flex flex-wrap items-center gap-x-8 gap-y-4">
+              <Action href={`/contact?niche=${niche}`}>See if we&rsquo;re a fit</Action>
+              <Action href="/services" variant="quiet">
+                Compare the four services
+              </Action>
+            </div>
+          </div>
         </div>
       </Section>
     </>

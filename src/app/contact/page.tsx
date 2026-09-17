@@ -5,6 +5,7 @@ import { isServiceSlug } from "@/content/services";
 import { isNicheFormValue } from "@/content/niches";
 import { buildMetadata, contactPageJsonLd } from "@/lib/seo";
 import { Section } from "@/components/ui/Section";
+import { Marker } from "@/components/ui/Marker";
 import { JsonLd } from "@/components/ui/JsonLd";
 import { ContactForm } from "@/components/forms/ContactForm";
 
@@ -12,7 +13,7 @@ type Search = { service?: string; niche?: string };
 
 export const metadata: Metadata = buildMetadata({
   title: "Contact",
-  description: "Tell us about your business and get an honest answer on whether we are a fit.",
+  description: "Tell us about the business and get a straight answer on whether we are a fit.",
   path: "/contact",
 });
 
@@ -24,35 +25,40 @@ export default async function ContactPage({ searchParams }: { searchParams: Prom
   return (
     <>
       <JsonLd data={contactPageJsonLd()} />
-      <Section tone="white" className="!pb-8">
-        <div className="max-w-3xl">
-          <h1 className="h1 text-navy">See if there&rsquo;s a good fit</h1>
-          <p className="mt-6 text-lg">
-            Tell us a little about the business. We reply within {contact.replyWindow} with an honest read on
-            whether we can help.
-          </p>
+
+      <Section className="pb-12 pt-14 md:pb-16 md:pt-24">
+        <div className="grid gap-x-5 gap-y-10 md:grid-cols-12">
+          <div className="md:col-span-8">
+            <Marker>Contact</Marker>
+            <h1 className="display display-xl mt-7">See if there&rsquo;s a good fit.</h1>
+          </div>
+          <div className="md:col-span-4 md:self-end">
+            <p className="lede">
+              Tell us about the business. You get a written answer within {contact.replyWindow}, including if the
+              answer is that we cannot help.
+            </p>
+          </div>
         </div>
       </Section>
-      <Section tone="white" className="!pt-0">
-        <div className="grid gap-12 md:grid-cols-5">
-          <div className="md:col-span-3">
+
+      <Section className="pb-24 md:pb-32">
+        <div className="grid gap-x-5 gap-y-16 border-t border-ink pt-12 md:grid-cols-12">
+          <div className="md:col-span-7">
             <ContactForm defaultService={defaultService} defaultNiche={defaultNiche} />
           </div>
-          <aside className="md:col-span-2">
-            <p className="eyebrow mb-4">What happens next</p>
-            <ol className="space-y-4">
+          <aside className="md:col-span-4 md:col-start-9">
+            <p className="marker">What happens next</p>
+            <ol className="mt-5">
               {contact.whatHappensNext.map((step, i) => (
-                <li key={step} className="flex gap-4">
-                  <span className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-md bg-amber font-heading font-bold text-navy">
-                    {i + 1}
-                  </span>
-                  <span className="pt-1">{step}</span>
+                <li key={step} className="grid grid-cols-12 gap-x-4 border-t border-rule py-5">
+                  <span className="numeral col-span-2 text-lg">{String(i + 1).padStart(2, "0")}</span>
+                  <span className="col-span-10 text-ink-soft">{step}</span>
                 </li>
               ))}
             </ol>
             <p className="mt-8 text-sm text-muted">
-              Prefer email?{" "}
-              <a href={`mailto:${site.contactEmail}`} className="underline">
+              Would rather just email?{" "}
+              <a href={`mailto:${site.contactEmail}`} className="link">
                 {site.contactEmail}
               </a>
             </p>

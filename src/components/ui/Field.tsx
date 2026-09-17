@@ -9,14 +9,13 @@ interface Props {
   children: ReactNode;
 }
 
-/** Label + control + error wiring (aria-describedby) for every form input. */
+/** Label above, control underlined, error beneath. No boxes. */
 export function Field({ id, label, error, hint, required, children }: Props) {
-  const describedBy = [hint ? `${id}-hint` : null, error ? `${id}-error` : null].filter(Boolean).join(" ");
   return (
-    <div className="space-y-1.5" data-described-by={describedBy || undefined}>
-      <label htmlFor={id} className="block text-sm font-semibold text-navy">
+    <div className="space-y-2">
+      <label htmlFor={id} className="marker block">
         {label}
-        {required ? "" : <span className="ml-1 font-normal text-muted">(optional)</span>}
+        {!required && <span className="ml-2 normal-case tracking-normal">optional</span>}
       </label>
       {hint && (
         <p id={`${id}-hint`} className="text-sm text-muted">
@@ -25,13 +24,10 @@ export function Field({ id, label, error, hint, required, children }: Props) {
       )}
       {children}
       {error && (
-        <p id={`${id}-error`} className="text-sm text-error" role="alert">
+        <p id={`${id}-error`} className="text-sm text-accent" role="alert">
           {error}
         </p>
       )}
     </div>
   );
 }
-
-export const inputClass =
-  "block w-full rounded-md border border-line bg-white px-3.5 py-3 text-base text-slate placeholder:text-muted focus:border-navy";
