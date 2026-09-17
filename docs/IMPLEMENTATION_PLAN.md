@@ -82,7 +82,8 @@ ei_conversion_v3/
   public/
   # (icon.svg and opengraph-image.tsx live in src/app/, see below)
   scripts/
-    check-env.ts                    # prebuild: required vars by APP_PHASE; bracket-placeholder check on production builds
+    check-env.ts                    # prebuild: required vars by APP_PHASE; bracket-placeholder check on live builds
+    placeholders.ts                 # string-literal placeholder scanner shared by check-env and its unit test
     seed-quizzes.ts                 # Phase 3: load content/quizzes.sample.json locally; refuses to run when VERCEL_ENV=production
     send-test-email.ts              # Phase 2: deliverability check (--to)
   src/
@@ -174,7 +175,7 @@ ei_conversion_v3/
       index.ts                      # drizzle(neon(DATABASE_URL)) via drizzle-orm/neon-http; exports db and db.batch
       schema.ts
     test/
-      content.test.ts, validation.test.ts, dates.test.ts, rate-limit.test.ts,
+      content.test.ts, placeholders.test.ts, validation.test.ts, dates.test.ts, rate-limit.test.ts,
       auth.test.ts, quiz-select.test.ts, quiz-send.test.ts, subscribers.test.ts
 ```
 
@@ -1000,7 +1001,7 @@ Poster: 1280x720 JPEG under 120 KB from a frame where the speaker looks at the c
 
 | Variable | Purpose | Public? | First phase | Required? |
 |---|---|---|---|---|
-| `NEXT_PUBLIC_SITE_URL` | Canonical origin `https://ei-conversion.com`; set ONLY in the Vercel Production environment (previews fall back to `VERCEL_URL`) | yes | 1 | production builds |
+| `NEXT_PUBLIC_SITE_URL` | Canonical origin `https://ei-conversion.com`; set ONLY in the Vercel Production environment. Unset, production falls back to `VERCEL_PROJECT_PRODUCTION_URL` (the project's stable production domain) and previews to `VERCEL_URL` (per-deployment). | yes | 1 | live builds |
 | `APP_PHASE` | `1`, `2`, or `3`; tells `scripts/check-env.ts` which variables are required and gates server copy (unlock template); default `1` when unset | no | 1 | optional (default 1) |
 | `NEXT_PUBLIC_APP_PHASE` | Public mirror of `APP_PHASE` for client components (`ContactForm` mailto fallback, `EmailCapture` visibility, `/learn` footer line); check-env fails if the two differ | yes | 1 | optional (default 1) |
 | `NEXT_PUBLIC_MEDIA_BASE_URL` | R2 public base URL (custom domain or r2.dev) | yes | 1 | optional until the first `ready: true` slot |
@@ -1023,9 +1024,9 @@ Poster: 1280x720 JPEG under 120 KB from a frame where the speaker looks at the c
 The Neon integration also injects legacy `POSTGRES_URL` / `PG*` variables; the app ignores them.
 
 `lib/env.ts` reads these lazily with zod and throws a clear error naming the missing variable. `scripts/check-env.ts` runs in `prebuild` (via `tsx`) with exactly these rules:
-- Required: phase 1 -> `NEXT_PUBLIC_SITE_URL` when `VERCEL_ENV === "production"`; phase 2 -> plus `DATABASE_URL`, `RESEND_API_KEY`, `RESEND_SEGMENT_ID`, `OWNER_EMAIL`, `IP_HASH_SALT`; phase 3 -> plus `ADMIN_PASSWORD`, `ADMIN_SESSION_SECRET`, `CRON_SECRET`. Everything else is optional; `RESEND_WEBHOOK_SECRET` missing at phase 3 is a warning.
+- Required: `NEXT_PUBLIC_SITE_URL` on a live build (production plus the real domain; a production review build on `*.vercel.app` only warns); phase 2 -> plus `DATABASE_URL`, `RESEND_API_KEY`, `RESEND_SEGMENT_ID`, `OWNER_EMAIL`, `IP_HASH_SALT`; phase 3 -> plus `ADMIN_PASSWORD`, `ADMIN_SESSION_SECRET`, `CRON_SECRET`. Everything else is optional; `RESEND_WEBHOOK_SECRET` missing at phase 3 is a warning.
 - `APP_PHASE` and `NEXT_PUBLIC_APP_PHASE` must be equal (both default to `1`).
-- When `VERCEL_ENV === "production"` (any phase): fail if any string in `src/config/site.ts` or under `src/content/` still matches the bracket-placeholder regex `/\[[A-Z][^\]]*\]/`. Preview and local builds only warn, so Phase 1 development with placeholders proceeds while a live site can never show literal brackets or send mail from "[OWNER FIRST NAME]".
+- Placeholder guard: fail if any STRING LITERAL in `src/config/site.ts` or under `src/content/` still matches `/\[[A-Z][^\]]*\]/`, but only on a LIVE build, meaning `VERCEL_ENV === "production"` AND the production host (`NEXT_PUBLIC_SITE_URL`, else `VERCEL_PROJECT_PRODUCTION_URL`) contains `site.domain`. Every other build warns loudly and proceeds, so the owner can review the site on its `*.vercel.app` URL before writing the copy that fills the placeholders in, while the live domain can never show literal brackets or send mail from "[OWNER FIRST NAME]". The scan reads string literals only (`scripts/placeholders.ts`, unit-tested): scanning raw lines flagged TypeScript type syntax such as `as [NicheSlug, ...NicheSlug[]]` and prose in comments. A placeholder written inside a comment is therefore NOT tracked by the guard; use `TODO(owner):` there instead.
 
 `.env.example` lists all with comments. Local dev uses `.env.local` (git-ignored), pulled with `vercel env pull .env.local` after `vercel link`.
 

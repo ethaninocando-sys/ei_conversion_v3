@@ -8,7 +8,7 @@ export const home: HomeContent = {
   vslBullets: ["[BULLET 1]", "[BULLET 2]", "[BULLET 3]"],
   plainDealing: {
     heading: "What you will not get from us",
-    // [OWNER: edit these to what you can stand behind.]
+    // TODO(owner): edit these to what you can stand behind.
     bullets: [
       "No long contracts.",
       "No inflated promises.",

@@ -4,11 +4,25 @@
  * verifying the new domain in Resend. Nothing else references the brand name.
  *
  * Anything in [BRACKETS] must be filled in by the owner before the site goes
- * live. `scripts/check-env.ts` refuses a production build while any bracket
- * placeholder remains in this file or under src/content.
+ * live. `scripts/check-env.ts` refuses to build once the real domain is
+ * connected while any bracket placeholder remains here or under src/content.
  */
 
+// VERCEL_PROJECT_PRODUCTION_URL is the project's stable production domain.
+// VERCEL_URL is per-deployment, so it must only be used for previews, or
+// canonical URLs on the live site would point at a one-off deployment.
 const productionUrl = process.env.VERCEL_PROJECT_PRODUCTION_URL;
+const deploymentUrl = process.env.VERCEL_URL;
+const isProduction = process.env.VERCEL_ENV === "production";
+
+function resolveUrl(): string {
+  // `||` not `??`: Vercel passes unset variables through as "".
+  if (process.env.NEXT_PUBLIC_SITE_URL) return process.env.NEXT_PUBLIC_SITE_URL;
+  if (isProduction && productionUrl) return `https://${productionUrl}`;
+  if (deploymentUrl) return `https://${deploymentUrl}`;
+  if (productionUrl) return `https://${productionUrl}`;
+  return "http://localhost:3000";
+}
 
 export const site = {
   name: "Ei Conversion",
@@ -16,13 +30,7 @@ export const site = {
   legalName: "[LEGAL ENTITY NAME]",
   tagline: "[TAGLINE: one sentence, e.g. Marketing that fits your trade]",
   domain: "ei-conversion.com",
-  url:
-    process.env.NEXT_PUBLIC_SITE_URL ??
-    (process.env.VERCEL_URL
-      ? `https://${process.env.VERCEL_URL}`
-      : productionUrl
-        ? `https://${productionUrl}`
-        : "http://localhost:3000"),
+  url: resolveUrl(),
   ownerFirstName: "[OWNER FIRST NAME]",
   /** Sending address (Phase 2, after Resend domain verification). */
   fromEmail: "hello@ei-conversion.com",
@@ -32,7 +40,10 @@ export const site = {
   mailingAddress: "[MAILING ADDRESS]",
   serviceArea: "[SERVICE AREA, e.g. Greater Tampa Bay]",
   city: "[CITY, STATE]",
-  /** IANA timezone used for "today" in the daily quiz. [CONFIRM OWNER TIMEZONE] */
+  /**
+   * IANA timezone used for "today" in the daily quiz.
+   * TODO(owner): confirm. Lives in a comment, so the build guard cannot catch it.
+   */
   timezone: "America/New_York",
 } as const;
 
